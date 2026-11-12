@@ -114,7 +114,7 @@ function initDb(){
 }
 async function clearAll(){if(!confirm("Effacer tout l’historique ?"))return;if(DB){try{const r=await DB.collection("sales").get();await Promise.all(r.docs.map(d=>DB.doc("sales/"+d.id).delete()))}catch(e){}}else{S.sales=[];save();render()}}
 const $=s=>document.querySelector(s);
-let CUSTOM=[],cn=0,tipMode={t:"eur",v:0},parts=[],splitN=0,amtStr="";
+let CUSTOM=[],cn=0,tipMode={t:"eur",v:0},parts=[],splitN=0,splitStart=0,amtStr="";
 const prod=id=>S.products.find(p=>p.id==id)||CUSTOM.find(p=>p.id==id);
 const total=()=>Object.entries(cart).reduce((a,[id,n])=>a+(prod(id)?n*prod(id).price:0),0);
 function add(id,d){if(parts.length)return;cart[id]=(cart[id]||0)+d;if(cart[id]<=0)delete cart[id];render()}
@@ -122,9 +122,9 @@ const tipAmt=()=>{const t=total();return tipMode.t=="pct"?Math.round(t*tipMode.v
 const grand=()=>Math.round((total()+tipAmt())*100)/100;
 const paid=()=>Math.round(parts.reduce((a,p)=>a+p.amt,0)*100)/100;
 const remaining=()=>Math.max(0,Math.round((grand()-paid())*100)/100);
-const defaultAmt=()=>{const r=remaining();return(splitN&&parts.length<splitN-1)?Math.round(r/(splitN-parts.length)*100)/100:r};
+const defaultAmt=()=>{const r=remaining(),done=parts.length-splitStart;return(splitN&&done<splitN-1)?Math.round(r/(splitN-done)*100)/100:r};
 const due=()=>{const v=parseFloat(String(amtStr).replace(",","."));const r=remaining();return(amtStr!==""&&v>0)?Math.min(Math.round(v*100)/100,r):defaultAmt()};
-function resetPay(){parts=[];splitN=0;amtStr="";given=""}
+function resetPay(){parts=[];splitN=0;splitStart=0;amtStr="";given=""}
 function finalize(){
  const items=Object.entries(cart).filter(([id])=>prod(id)).map(([id,n])=>({name:prod(id).name,price:prod(id).price,qty:n}));
  const sale={t:Date.now(),items,total:grand(),pay:parts.length==1?parts[0].pay:"Mixte"};
@@ -188,7 +188,7 @@ function sumupUrl(t){const e=encodeURIComponent,a=t.toFixed(2);return"sumupmerch
 const CB=()=>location.origin+location.pathname;
 function savePending(){
  const items=Object.entries(cart).filter(([id])=>prod(id)).map(([id,n])=>({name:prod(id).name,price:prod(id).price,qty:n}));
- try{localStorage.setItem("vdl-pending",JSON.stringify({t:Date.now(),due:due(),cart,custom:CUSTOM,tipMode,parts,splitN}))}catch(e){}
+ try{localStorage.setItem("vdl-pending",JSON.stringify({t:Date.now(),due:due(),cart,custom:CUSTOM,tipMode,parts,splitN,splitStart}))}catch(e){}
 }
 let returnSale=null,returnMsg="";
 function handleReturn(){
@@ -199,11 +199,11 @@ function handleReturn(){
  if(!pend)return;
  try{localStorage.removeItem("vdl-pending")}catch(e){}
  if(st=="success"){
-  cart=pend.cart||{};CUSTOM=pend.custom||[];tipMode=pend.tipMode||{t:"eur",v:0};parts=pend.parts||[];splitN=pend.splitN||0;pay="CB";
+  cart=pend.cart||{};CUSTOM=pend.custom||[];tipMode=pend.tipMode||{t:"eur",v:0};parts=pend.parts||[];splitN=pend.splitN||0;splitStart=pend.splitStart||0;pay="CB";
   parts.push({amt:pend.due,pay:"CB (SumUp)"});
   if(remaining()<=0.004)returnSale=finalize();
  }else{
-  cart=pend.cart||{};CUSTOM=pend.custom||[];tipMode=pend.tipMode||{t:"eur",v:0};parts=pend.parts||[];splitN=pend.splitN||0;pay="CB";
+  cart=pend.cart||{};CUSTOM=pend.custom||[];tipMode=pend.tipMode||{t:"eur",v:0};parts=pend.parts||[];splitN=pend.splitN||0;splitStart=pend.splitStart||0;pay="CB";
   returnMsg="Le paiement SumUp n’a pas abouti"+(p.get("smp-failure-cause")?" ("+p.get("smp-failure-cause")+")":"")+". Le ticket est conservé.";
  }
 }
@@ -264,7 +264,7 @@ function render(){
  $("#app").innerHTML=tab=="caisse"?vCaisse():tab=="histo"?vHisto():vProd();
  if(tab=="caisse"){drawGrid();chg()}
 }
-const ACT={add:(v,b)=>add(+v,+b.dataset.d),addP,goTicket:()=>{const e=document.querySelector(".ticket");if(e)e.scrollIntoView({behavior:"smooth"})},goTop:()=>window.scrollTo({top:0,behavior:"smooth"}),clearCart:()=>{cart={};CUSTOM=[];tipMode={t:"eur",v:0};resetPay();render()},editLine:v=>editLine(+v),rm:v=>rmLine(+v),split:v=>{splitN=+v;amtStr="";render()},splitGo:()=>{const n=parseInt($("#splitn").value);if(n>=2&&n<=50){splitN=n;amtStr="";render()}},undoPart:()=>{parts.pop();amtStr="";render()},tip:v=>{if(parts.length)return;const[k,n]=v.split(":");tipMode={t:k,v:+n};render()},free:()=>{if(parts.length)return;const a=parseFloat(String($("#fa").value).replace(",","."));if(!(a>0))return;const id=-(++cn);CUSTOM.push({id,name:$("#fl").value.trim()||"Montant libre",price:a,cat:"Libre"});add(id,1)},clearAll,csv,del:v=>del(+v),delP:v=>delP(+v),editP:v=>editP(+v),pay:v=>{pay=v;render()},cat:v=>setCat(+v),ticket:v=>showTicket(S.sales[+v]),tab:v=>{tab=v;render()},validate,saveCfg};
+const ACT={add:(v,b)=>add(+v,+b.dataset.d),addP,goTicket:()=>{const e=document.querySelector(".ticket");if(e)e.scrollIntoView({behavior:"smooth"})},goTop:()=>window.scrollTo({top:0,behavior:"smooth"}),clearCart:()=>{cart={};CUSTOM=[];tipMode={t:"eur",v:0};resetPay();render()},editLine:v=>editLine(+v),rm:v=>rmLine(+v),split:v=>{splitN=+v;splitStart=parts.length;amtStr="";render()},splitGo:()=>{const n=parseInt($("#splitn").value);if(n>=2&&n<=50){splitN=n;splitStart=parts.length;amtStr="";render()}},undoPart:()=>{parts.pop();if(parts.length<splitStart)splitStart=parts.length;amtStr="";render()},tip:v=>{if(parts.length)return;const[k,n]=v.split(":");tipMode={t:k,v:+n};render()},free:()=>{if(parts.length)return;const a=parseFloat(String($("#fa").value).replace(",","."));if(!(a>0))return;const id=-(++cn);CUSTOM.push({id,name:$("#fl").value.trim()||"Montant libre",price:a,cat:"Libre"});add(id,1)},clearAll,csv,del:v=>del(+v),delP:v=>delP(+v),editP:v=>editP(+v),pay:v=>{pay=v;render()},cat:v=>setCat(+v),ticket:v=>showTicket(S.sales[+v]),tab:v=>{tab=v;render()},validate,saveCfg};
 document.addEventListener("click",e=>{if(e.target.closest("[data-pay]"))savePending();const b=e.target.closest("[data-a]");if(!b||b.disabled)return;const f=ACT[b.dataset.a];if(f)f(b.dataset.v,b)});
 document.addEventListener("input",e=>{const x=e.target;if(x.dataset.i=="q"){q=x.value;drawGrid()}else if(x.dataset.i=="given"){given=x.value;chg()}else if(x.dataset.i=="amt"){amtStr=x.value;refreshTot()}else if(x.dataset.i=="tip"){if(parts.length)return;tipMode={t:"eur",v:parseFloat(String(x.value).replace(",","."))||0};refreshTot()}});
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
