@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Caisse – Au Verger des Louves</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Allura&family=Lexend:wght@400;600&family=Lora:wght@600;700&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f7f6f1;--surf:#fff;--tx:#383838;--mut:#777468;--ac:#a2bd54;--act:#1f2410;--gr:#a2bd54;--bd:#dedbcf;--warn:#a8321f;--hd:#efede6;--hdt:#4a4a4a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#1b1d18;--surf:#262922;--tx:#ecebe4;--mut:#a09d90;--ac:#a2bd54;--act:#1f2410;--gr:#a2bd54;--bd:#3a3e33;--warn:#ff9a86;--hd:#14160f;--hdt:#ecebe4}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#1b1d18;--surf:#262922;--tx:#ecebe4;--mut:#a09d90;--ac:#a2bd54;--act:#1f2410;--gr:#a2bd54;--bd:#3a3e33;--warn:#ff9a86;--hd:#14160f;--hdt:#ecebe4}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;overflow-x:hidden;background:var(--bg);color:var(--tx);font:15px/1.4 "Lexend",system-ui,-apple-system,"Segoe UI",sans-serif}
+.topbar{background:var(--gr);color:var(--act);font-size:12px;padding:6px 16px;text-align:right}
+header{display:flex;align-items:center;padding:10px 16px;background:var(--hd);color:var(--hdt)}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{width:68px;height:68px;border-radius:50%;background:#fff;flex:none}
+.script{font-family:"Allura","Brush Script MT",cursive;font-size:38px;line-height:1;display:block}
+header small{display:block;letter-spacing:.14em;text-transform:uppercase;font-size:11px;opacity:.75;margin-top:2px}
+.band{height:10px;background:var(--gr)}
+h3{font-family:"Lora",Georgia,serif}
+nav{display:flex;gap:6px;padding:10px 16px}
+button{font:inherit;color:inherit;border:1px solid var(--bd);background:var(--surf);border-radius:10px;padding:10px 14px;cursor:pointer}
+button.on,button.pri{background:var(--ac);color:var(--act);border-color:var(--ac);font-weight:600}
+button:disabled{opacity:.5}
+button.dng{color:var(--warn)}
+main{padding:0 16px 24px;max-width:1150px;margin:auto}
+.caisse{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:800px){.caisse{grid-template-columns:minmax(0,1.7fr) minmax(0,1fr)}.ticket{position:sticky;top:8px;align-self:start}}
+.cats{display:flex;gap:6px;overflow-x:auto;margin:10px 0;padding-bottom:4px}
+.cats button{flex:none;white-space:nowrap;padding:8px 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:10px}
+.prod{display:flex;flex-direction:column;justify-content:space-between;min-height:84px;text-align:left;border-left:5px solid var(--gr)}
+.prod b{font-family:"Lora",Georgia,serif;font-size:14px;font-weight:600}.prod span{color:var(--mut)}
+.card{background:var(--surf);border:1px solid var(--bd);border-radius:14px;padding:14px}
+.line{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--bd)}
+.line .n{flex:1}
+.q{display:flex;align-items:center;gap:6px}.q button{padding:2px 10px}
+.tot{display:flex;justify-content:space-between;font-family:"Lora",Georgia,serif;font-size:24px;font-weight:700;margin:12px 0;padding-top:8px;border-top:2px solid var(--gr)}
+.pay{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+input{font:inherit;font-size:16px;color:inherit;background:var(--surf);border:1px solid var(--bd);border-radius:8px;padding:9px;width:100%}
+.mut{color:var(--mut)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%}td,th{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:left}
+td.w{white-space:nowrap}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.stat{flex:1;min-width:130px}.stat b{font-family:"Lora",Georgia,serif;font-size:22px;display:block}
+a.btn{display:block;text-align:center;text-decoration:none;color:var(--act);background:var(--ac);font-weight:600;border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.tips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px}.tips button{padding:6px 10px}
+a.btn.alt{background:var(--surf);color:var(--tx);border:1px solid var(--bd);font-weight:400}
+.bar,.mob{display:none}
+@media(max-width:799px){.bar{display:block;position:fixed;left:0;right:0;bottom:0;z-index:10;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));background:var(--hd);border-top:3px solid var(--gr)}.bar button{width:100%;padding:14px;font-size:16px}.mob{display:inline-block}main{padding-bottom:96px}}
+@media(max-width:480px){.script{font-size:28px}.logo{width:52px;height:52px}header{padding:8px 12px}.brand{gap:10px}main{padding-left:10px;padding-right:10px}nav{padding:8px 10px}.topbar{padding:6px 10px}}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.rc{background:#fff;color:#222;border-radius:12px;padding:18px;max-width:380px;width:100%;max-height:90vh;overflow:auto}
+.rc pre{font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;margin:0 0 12px}
+@media print{body>*:not(.ov){display:none!important}.ov{position:static;background:none;padding:0}.rc .row,.rc input{display:none}.rc{max-width:none}}
+</style>
+</head>
+<body>
+<div class="topbar" id="date"></div>
+<header><div class="brand"><img class="logo" alt="" src="data:image/png;base64,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"><div><span class="script">Au Verger des Louves</span><small>Caisse</small></div></div></header>
+<div class="band"></div>
+<nav id="nav"></nav>
+<main id="app"></main>
+<script>
+const eur=n=>n.toLocaleString("fr-FR",{style:"currency",currency:"EUR"});
+const DEF=[{"id": 1, "name": "KOTA 4 personnes et plus", "price": 80.0, "cat": "Kota"}, {"id": 2, "name": "Kota 2 personnes", "price": 50.0, "cat": "Kota"}, {"id": 3, "name": "Kota 3 personnes", "price": 70.0, "cat": "Kota"}, {"id": 4, "name": "Fondue 3 Viandes - Enfant", "price": 20.0, "cat": "Repas"}, {"id": 5, "name": "Fondue 3 Viandes Adulte", "price": 35.0, "cat": "Repas"}, {"id": 6, "name": "Fondue Adulte", "price": 35.0, "cat": "Repas"}, {"id": 7, "name": "Fondue enfant", "price": 20.0, "cat": "Repas"}, {"id": 8, "name": "Grillade Adulte", "price": 35.0, "cat": "Repas"}, {"id": 9, "name": "Grillade enfant", "price": 20.0, "cat": "Repas"}, {"id": 10, "name": "Mont d’Or Adulte", "price": 35.0, "cat": "Repas"}, {"id": 11, "name": "Mont d’Or enfant", "price": 20.0, "cat": "Repas"}, {"id": 12, "name": "Planchette Charcuterie", "price": 15.0, "cat": "Repas"}, {"id": 13, "name": "Raclette Adulte", "price": 35.0, "cat": "Repas"}, {"id": 14, "name": "Raclette enfant", "price": 20.0, "cat": "Repas"}, {"id": 15, "name": "Repas enfant", "price": 8.0, "cat": "Repas"}, {"id": 16, "name": "Formule ( Plat, Dessert) Adulte", "price": 25.0, "cat": "Table D'hôtes"}, {"id": 17, "name": "Formule ( Plat, Dessert) enfants", "price": 15.0, "cat": "Table D'hôtes"}, {"id": 18, "name": "Formule (Entrée, Plat, Dessert) Adulte", "price": 35.0, "cat": "Table D'hôtes"}, {"id": 19, "name": "Formule (Entrée, Plat, Dessert) Enfants", "price": 20.0, "cat": "Table D'hôtes"}, {"id": 20, "name": "Tartes Flambées", "price": 12.0, "cat": "Table D'hôtes"}, {"id": 21, "name": "Bière - Pression (Petit)", "price": 3.5, "cat": "Événements"}, {"id": 22, "name": "Bière - Pression (Grand)", "price": 6.0, "cat": "Événements"}, {"id": 23, "name": "Café", "price": 1.0, "cat": "Événements"}, {"id": 24, "name": "Cartes Boissons (Carte 10 euros)", "price": 10.0, "cat": "Événements"}, {"id": 25, "name": "Cartes Boissons (Carte 20 Euros)", "price": 20.0, "cat": "Événements"}, {"id": 26, "name": "Crémant (Ice)", "price": 20.0, "cat": "Événements"}, {"id": 27, "name": "Crémant (Normal)", "price": 18.0, "cat": "Événements"}, {"id": 28, "name": "Décoration + Sonos", "price": 120.0, "cat": "Événements"}, {"id": 29, "name": "Entrée (Adulte)", "price": 28.0, "cat": "Événements"}, {"id": 30, "name": "Entrée (Enfant)", "price": 18.0, "cat": "Événements"}, {"id": 31, "name": "Formule Tartes Flambées", "price": 39.0, "cat": "Événements"}, {"id": 32, "name": "Fût de Bière (Brasserie du Réservoir)", "price": 150.0, "cat": "Événements"}, {"id": 33, "name": "Garnitures (Tables + Bancs)", "price": 8.0, "cat": "Événements"}, {"id": 34, "name": "Gonflable", "price": 200.0, "cat": "Événements"}, {"id": 35, "name": "Granité (Petit)", "price": 2.5, "cat": "Événements"}, {"id": 36, "name": "Granité (Grand)", "price": 4.0, "cat": "Événements"}, {"id": 37, "name": "Location Verger", "price": 500.0, "cat": "Événements"}, {"id": 38, "name": "Soft (Ice Tea)", "price": 2.5, "cat": "Événements"}, {"id": 39, "name": "Soft (Coca)", "price": 2.5, "cat": "Événements"}, {"id": 40, "name": "Soft (Eau Gazeuse)", "price": 2.0, "cat": "Événements"}, {"id": 41, "name": "Soft (Eau Plate)", "price": 2.0, "cat": "Événements"}, {"id": 42, "name": "Tartes Flambées à volonté (6 recettes aux choix)", "price": 20.0, "cat": "Événements"}, {"id": 43, "name": "Tonnelle", "price": 100.0, "cat": "Événements"}, {"id": 44, "name": "Vin - Gewurtztraminer (Bouteille)", "price": 15.0, "cat": "Événements"}, {"id": 45, "name": "Vin - Gewurtztraminer (Verre)", "price": 3.0, "cat": "Événements"}, {"id": 46, "name": "Vin - Pinot Gris (Verre)", "price": 3.0, "cat": "Événements"}, {"id": 47, "name": "Vin - Pinot Gris (Bouteille)", "price": 13.0, "cat": "Événements"}, {"id": 48, "name": "Vin - Pinot Noir (Bouteille)", "price": 16.0, "cat": "Événements"}, {"id": 49, "name": "Vin - Pinot Noir (Verre)", "price": 3.0, "cat": "Événements"}, {"id": 50, "name": "Vin - Rosé (Bouteille)", "price": 14.0, "cat": "Événements"}, {"id": 51, "name": "Vin - Rosé (Verre)", "price": 3.0, "cat": "Événements"}, {"id": 52, "name": "Cannettes Bières", "price": 4.5, "cat": "Bières"}, {"id": 53, "name": "IPA", "price": 3.5, "cat": "Bières"}, {"id": 54, "name": "Millésime", "price": 3.5, "cat": "Bières"}, {"id": 55, "name": "Noël", "price": 3.5, "cat": "Bières"}, {"id": 56, "name": "Peter Cascade", "price": 3.5, "cat": "Bières"}, {"id": 57, "name": "Philippe Maurice", "price": 3.5, "cat": "Bières"}, {"id": 58, "name": "Pilsner", "price": 3.5, "cat": "Bières"}, {"id": 59, "name": "Porter", "price": 3.5, "cat": "Bières"}, {"id": 60, "name": "Printemps", "price": 3.5, "cat": "Bières"}, {"id": 61, "name": "Weizen", "price": 3.5, "cat": "Bières"}, {"id": 62, "name": "White IPA", "price": 3.5, "cat": "Bières"}, {"id": 63, "name": "Winterbier", "price": 3.5, "cat": "Bières"}, {"id": 64, "name": "Apremont", "price": 22.0, "cat": "Vins"}, {"id": 65, "name": "Champagne", "price": 50.0, "cat": "Vins"}, {"id": 66, "name": "Chinon", "price": 28.0, "cat": "Vins"}, {"id": 67, "name": "Chinon Perriere", "price": 28.0, "cat": "Vins"}, {"id": 68, "name": "Coussan", "price": 22.0, "cat": "Vins"}, {"id": 69, "name": "Crémant d'Alsace 37,5cl", "price": 13.0, "cat": "Vins"}, {"id": 70, "name": "Crémant d’Alsace 0,75cl", "price": 20.0, "cat": "Vins"}, {"id": 71, "name": "Crémant d’Alsace Muré 0,37cl", "price": 13.0, "cat": "Vins"}, {"id": 72, "name": "Côtes du Rhône", "price": 28.0, "cat": "Vins"}, {"id": 73, "name": "Gewurtztraminer 0,75cl", "price": 15.0, "cat": "Vins"}, {"id": 74, "name": "Gewurtztraminer 0,375cl", "price": 10.5, "cat": "Vins"}, {"id": 75, "name": "Monbazillac", "price": 22.0, "cat": "Vins"}, {"id": 76, "name": "Morgon", "price": 28.0, "cat": "Vins"}, {"id": 77, "name": "Pinot Gris 0,37cl", "price": 9.5, "cat": "Vins"}, {"id": 78, "name": "Pinot Gris 0,75cl", "price": 13.0, "cat": "Vins"}, {"id": 79, "name": "Pinot Noir \"Meyer Thuet\"", "price": 18.0, "cat": "Vins"}, {"id": 80, "name": "Pinot noir 0,37cl", "price": 11.0, "cat": "Vins"}, {"id": 81, "name": "Pinot noir 0,75cl", "price": 18.0, "cat": "Vins"}, {"id": 82, "name": "Prélude", "price": 22.0, "cat": "Vins"}, {"id": 83, "name": "Carola Rouge 1L", "price": 3.0, "cat": "Soft"}, {"id": 84, "name": "Carola bleu 0.5 cl", "price": 2.0, "cat": "Soft"}, {"id": 85, "name": "Carola bleu 1 L", "price": 3.0, "cat": "Soft"}, {"id": 86, "name": "Carola rouge 0.50 cl", "price": 2.0, "cat": "Soft"}, {"id": 87, "name": "Coca cola", "price": 2.5, "cat": "Soft"}, {"id": 88, "name": "Fuzetea", "price": 2.5, "cat": "Soft"}, {"id": 89, "name": "Liqueur de Mirabelles", "price": 14.0, "cat": "Liqueurs"}, {"id": 90, "name": "Liqueur de Quetsches", "price": 14.0, "cat": "Liqueurs"}, {"id": 91, "name": "Vin de Noix", "price": 18.0, "cat": "Liqueurs"}, {"id": 92, "name": "Bijoux", "price": 25.0, "cat": "Suppléments"}, {"id": 93, "name": "Boîte à œufs", "price": 8.0, "cat": "Suppléments"}, {"id": 94, "name": "Confitures", "price": 5.0, "cat": "Suppléments"}, {"id": 95, "name": "Fromage 🧀", "price": 7.0, "cat": "Suppléments"}, {"id": 96, "name": "Jacuzzi Adulte", "price": 12.0, "cat": "Suppléments"}, {"id": 97, "name": "Jacuzzi Enfant", "price": 5.0, "cat": "Suppléments"}, {"id": 98, "name": "Parfum", "price": 20.0, "cat": "Suppléments"}, {"id": 99, "name": "Parking", "price": 5.0, "cat": "Suppléments"}, {"id": 100, "name": "Petit Déjeuner", "price": 10.0, "cat": "Suppléments"}, {"id": 101, "name": "Taxe de Séjour", "price": 1.1, "cat": "Suppléments"}, {"id": 102, "name": "Trajet Aéroport", "price": 30.0, "cat": "Suppléments"}, {"id": 103, "name": "Chambre Personnes supplémentaires", "price": 35.0, "cat": "Romantica & Funny"}, {"id": 104, "name": "Semaine Chambre pour 2 personnes", "price": 85.0, "cat": "Romantica & Funny"}, {"id": 105, "name": "Week-end Chambre pour 2 personnes", "price": 95.0, "cat": "Romantica & Funny"}, {"id": 106, "name": "Roulotte 2 personnes", "price": 120.0, "cat": "Roulotte"}, {"id": 107, "name": "Roulotte Personnes supplémentaires", "price": 35.0, "cat": "Roulotte"}, {"id": 108, "name": "Coffret 6 Bières \" Réservoir\"", "price": 18.0, "cat": "Mes articles"}];
+let S={products:DEF,sales:[]},cart={},cat="Tout",cats=["Tout"],tab="caisse",pay="Espèces",given="",q="";
+try{const r=localStorage.getItem("vdl-caisse-v2");if(r)S=JSON.parse(r)}catch(e){}
+let DB=null,sync="local";
+let CFG={key:"sup_afk_FSLqmXAbEqryMCY1zJe5knjWk0nF1WuB",appid:"fr.vergerdeslouves.caisse"};
+try{const c=localStorage.getItem("vdl-cfg");if(c)CFG={...CFG,...JSON.parse(c)}}catch(e){}
+const save=()=>{try{localStorage.setItem("vdl-caisse-v2",JSON.stringify(S))}catch(e){}};
+const saveP=()=>{save();if(DB)DB.doc("config/products").set({list:S.products,t:Date.now()}).catch(()=>{});render()};
+const OB="vdl-outbox";
+const outboxGet=()=>{try{return JSON.parse(localStorage.getItem(OB)||"[]")}catch(e){return[]}};
+const outboxAdd=s=>{try{const a=outboxGet();a.push(s);localStorage.setItem(OB,JSON.stringify(a))}catch(e){}};
+function flushOutbox(){const a=outboxGet();if(!a.length||!DB)return;try{localStorage.removeItem(OB)}catch(e){}a.forEach(s=>DB.collection("sales").add(s).catch(()=>outboxAdd(s)))}
+let syncStarted=false,localOnly=false;
+function closeLogin(){const o=document.querySelector("#lg");if(o)o.remove()}
+function showLogin(){
+ if(document.querySelector("#lg"))return;
+ const d=document.createElement("div");d.className="ov";d.id="lg";
+ d.innerHTML='<div class="rc"><h3 style="margin:0 0 8px">Caisse partagée</h3><p style="margin:0 0 10px">Saisis le mot de passe de la caisse pour synchroniser tes appareils.</p><input id="lgp" type="password" placeholder="Mot de passe" autocomplete="current-password" style="margin-bottom:8px;background:#fff;color:#222"><p id="lge" style="color:#a8321f;margin:0 0 8px"></p><div class="row"><button class="pri" id="lgb">Se connecter</button><button id="lgl">Continuer sans synchronisation</button></div></div>';
+ document.body.appendChild(d);
+ const go=async()=>{$("#lge").textContent="";$("#lgb").disabled=true;try{await window.FB.signIn($("#lgp").value)}catch(e){$("#lge").textContent="Mot de passe incorrect ou connexion impossible.";$("#lgb").disabled=false}};
+ $("#lgb").onclick=go;$("#lgp").onkeydown=e=>{if(e.key=="Enter")go()};$("#lgl").onclick=()=>{localOnly=true;closeLogin()};
+}
+function startSync(){
+ if(syncStarted)return;syncStarted=true;
+ DB=window.FB.adapter;sync="connecting";render();
+ const timer=setTimeout(()=>{if(sync=="connecting"){sync="slow";render()}},10000);
+ const fail=()=>{sync="local";render()};
+ DB.doc("config/settings").onSnapshot(s=>{const d=s.exists?s.data():null;if(d){CFG={...CFG,...d};try{localStorage.setItem("vdl-cfg",JSON.stringify(CFG))}catch(e){}render()}},fail);
+ DB.doc("config/products").onSnapshot(s=>{const d=s.exists?s.data():null;if(d&&d.list){S.products=d.list;save();render()}else if(!s.exists){DB.doc("config/products").set({list:S.products,t:Date.now()}).catch(()=>{})}},fail);
+ DB.collection("sales").orderBy("t","asc").onSnapshot(r=>{clearTimeout(timer);S.sales=r.docs.map(d=>({id:d.id,...d.data()}));sync="live";save();render()},fail);
+ flushOutbox();
+}
+function initDb(){
+ let got=false;
+ const t=setTimeout(()=>{if(!got){sync="slow";render()}},10000);
+ window.addEventListener("fb-auth",()=>{got=true;clearTimeout(t);if(window.FBUSER){closeLogin();startSync()}else if(!localOnly){showLogin()}});
+ window.addEventListener("fb-fail",()=>{got=true;clearTimeout(t);sync="local";render()});
+ if(window.FBFAIL)window.dispatchEvent(new Event("fb-fail"));
+ else if(window.FBREADY)window.dispatchEvent(new Event("fb-auth"));
+}
+async function clearAll(){if(!confirm("Effacer tout l’historique ?"))return;if(DB){try{const r=await DB.collection("sales").get();await Promise.all(r.docs.map(d=>DB.doc("sales/"+d.id).delete()))}catch(e){}}else{S.sales=[];save();render()}}
+const $=s=>document.querySelector(s);
+let CUSTOM=[],cn=0,tipMode={t:"eur",v:0};
+const prod=id=>S.products.find(p=>p.id==id)||CUSTOM.find(p=>p.id==id);
+const total=()=>Object.entries(cart).reduce((a,[id,n])=>a+(prod(id)?n*prod(id).price:0),0);
+function add(id,d){cart[id]=(cart[id]||0)+d;if(cart[id]<=0)delete cart[id];render()}
+const tipAmt=()=>{const t=total();return tipMode.t=="pct"?Math.round(t*tipMode.v)/100:Math.max(0,Math.round(tipMode.v*100)/100)};
+const grand=()=>Math.round((total()+tipAmt())*100)/100;
+function validate(){
+ const t=grand();if(!t)return;
+ const items=Object.entries(cart).filter(([id])=>prod(id)).map(([id,n])=>({name:prod(id).name,price:prod(id).price,qty:n}));
+ const sale={t:Date.now(),items,total:t,pay};const tp=tipAmt();if(tp)sale.tip=tp;
+ if(DB){DB.collection("sales").add(sale).catch(()=>{S.sales.push(sale);save();outboxAdd(sale);render()})}else{S.sales.push(sale);save();outboxAdd(sale)}
+ cart={};CUSTOM=[];tipMode={t:"eur",v:0};given="";render();showTicket(sale);
+}
+function csv(){
+ const rows=[["Date","Articles","Paiement","Pourboire","Total"]];
+ S.sales.forEach(s=>rows.push([new Date(s.t).toLocaleString("fr-FR"),s.items.map(i=>i.qty+"x "+i.name).join(" + "),s.pay,String(s.tip||0).replace(".",","),String(s.total).replace(".",",")]));
+ const b=new Blob(["\ufeff"+rows.map(r=>r.map(c=>'"'+c.replace(/"/g,'""')+'"').join(";")).join("\n")],{type:"text/csv"});
+ const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="ventes-verger-des-louves.csv";a.click();
+}
+function drawNav(){
+ $("#nav").innerHTML=[["caisse","Caisse"],["histo","Ventes"],["prod","Produits"]].map(([k,l])=>`<button class="${tab==k?"on":""}" data-a="tab" data-v="${k}">${l}</button>`).join("");
+}
+function ticketText(s){
+ const L=["AU VERGER DES LOUVES","2 Rue Charles Tschamber","68510 Helfrantzkirch","Tél. 06 89 13 02 02","info@vergerdeslouves.fr","",new Date(s.t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}),"--------------------------------"];
+ s.items.forEach(i=>{L.push(i.qty+" x "+i.name);L.push("      "+eur(i.price)+" = "+eur(i.qty*i.price))});
+ L.push("--------------------------------",...(s.tip?["Pourboire : "+eur(s.tip)]:[]),"TOTAL : "+eur(s.total),"Paiement : "+s.pay,"","Merci de votre visite !");
+ return L.join("\n");
+}
+function closeTk(){const o=$("#ov");if(o)o.remove()}
+function showTicket(s){
+ closeTk();
+ const d=document.createElement("div");d.className="ov";d.id="ov";
+ d.innerHTML='<div class="rc"><pre id="tk"></pre><input id="tkTo" placeholder="E-mail ou téléphone du client" style="margin-bottom:10px;background:#fff;color:#222"><div class="row"><button class="pri" id="tkC">Copier</button><button id="tkM">E-mail</button><button id="tkP">SMS</button><button id="tkS">Partager</button><button id="tkI">Imprimer</button><button id="tkX">Fermer</button></div></div>';
+ document.body.appendChild(d);
+ const txt=ticketText(s);$("#tk").textContent=txt;
+ const go=u=>{const a=document.createElement("a");a.href=u;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove()};
+ const to=()=>$("#tkTo").value.trim();
+ $("#tkC").onclick=async()=>{try{await navigator.clipboard.writeText(txt)}catch(e){const t=document.createElement("textarea");t.value=txt;document.body.appendChild(t);t.select();try{document.execCommand("copy")}catch(_){}t.remove()}$("#tkC").textContent="Copié ✔"};
+ $("#tkM").onclick=()=>go("mailto:"+encodeURIComponent(to())+"?subject="+encodeURIComponent("Votre ticket – Au Verger des Louves")+"&body="+encodeURIComponent(txt));
+ $("#tkP").onclick=()=>go("sms:"+to().replace(/[^\d+]/g,"")+"?&body="+encodeURIComponent(txt));
+ if(navigator.share)$("#tkS").onclick=()=>navigator.share({title:"Ticket",text:txt}).catch(()=>{});else $("#tkS").remove();
+ $("#tkI").onclick=()=>window.print();
+ $("#tkX").onclick=closeTk;
+}
+function saveCfg(){CFG={key:$("#ck").value.trim(),appid:$("#ca").value.trim()||"fr.vergerdeslouves.caisse"};try{localStorage.setItem("vdl-cfg",JSON.stringify(CFG))}catch(e){}if(DB)DB.doc("config/settings").set(CFG).catch(()=>{});render()}
+function sumupUrl(t){const e=encodeURIComponent,a=t.toFixed(2);return"sumupmerchant://pay/1.0?"+["amount="+a,"total="+a,"currency=EUR","affiliate-key="+e(CFG.key),"app-id="+e(CFG.appid),"title="+e("Au Verger des Louves"),"foreign-tx-id="+e("vdl-"+Date.now()),"callback="+e(CB()),"callbacksuccess="+e(CB()),"callbackfail="+e(CB())].join("&")}
+const CB=()=>location.origin+location.pathname;
+function savePending(){
+ const items=Object.entries(cart).filter(([id])=>prod(id)).map(([id,n])=>({name:prod(id).name,price:prod(id).price,qty:n}));
+ try{localStorage.setItem("vdl-pending",JSON.stringify({t:Date.now(),items,tip:tipAmt(),total:grand(),cart,custom:CUSTOM,tipMode}))}catch(e){}
+}
+let returnSale=null,returnMsg="";
+function handleReturn(){
+ const p=new URLSearchParams(location.search),st=p.get("smp-status");
+ if(!st)return;
+ let pend=null;try{pend=JSON.parse(localStorage.getItem("vdl-pending")||"null")}catch(e){}
+ history.replaceState(null,"",location.pathname);
+ if(!pend)return;
+ try{localStorage.removeItem("vdl-pending")}catch(e){}
+ if(st=="success"){
+  const sale={t:Date.now(),items:pend.items,total:pend.total,pay:"CB (SumUp)"};if(pend.tip)sale.tip=pend.tip;
+  S.sales.push(sale);save();outboxAdd(sale);returnSale=sale;
+ }else{
+  cart=pend.cart||{};CUSTOM=pend.custom||[];tipMode=pend.tipMode||{t:"eur",v:0};pay="CB";
+  returnMsg="Le paiement SumUp n’a pas abouti"+(p.get("smp-failure-cause")?" ("+p.get("smp-failure-cause")+")":"")+". Le ticket est conservé.";
+ }
+}
+function payBlock(t){
+ if(pay!="CB"||!t)return"";
+ if(!CFG.key)return'<p class="mut">Pour payer par carte depuis la caisse, renseigne ta clé SumUp dans l’onglet Produits.</p>';
+ return'<a class="btn" data-pay="1" href="'+sumupUrl(t).replace(/&/g,"&amp;")+'">Payer '+eur(t)+' avec SumUp</a><p class="mut" style="margin-top:0">Le paiement se fait dans l’appli SumUp (Tap to Pay). La vente s’enregistre toute seule au retour.</p>';
+}
+function setCat(i){cat=cats[i];render()}
+function drawGrid(){
+ const g=$("#grid");if(!g)return;const k=q.trim().toLowerCase();
+ const list=S.products.filter(p=>(cat=="Tout"||p.cat==cat)&&(!k||(p.name+" "+p.cat).toLowerCase().includes(k)));
+ g.innerHTML=list.map(p=>`<button class="prod" data-a="add" data-v="${p.id}" data-d="1"><b>${p.name}</b><span>${eur(p.price)}</span></button>`).join("")||'<p class="mut">Aucun produit.</p>';
+}
+function vCaisse(){
+ cats=["Tout",...new Set(S.products.map(p=>p.cat))];if(!cats.includes(cat))cat="Tout";
+ const t=total(),g=grand(),nb=Object.values(cart).reduce((a,b)=>a+b,0);
+ const lines=Object.entries(cart).filter(([id])=>prod(id)).map(([id,n])=>{const p=prod(id);return`<div class="line"><span class="n">${p.name}</span><span class="q"><button data-a="add" data-v="${id}" data-d="-1">−</button>${n}<button data-a="add" data-v="${id}" data-d="1">+</button></span><b>${eur(n*p.price)}</b></div>`}).join("")||'<p class="mut">Touchez un produit pour l’ajouter.</p>';
+ return`<div class="caisse"><div><input type="search" placeholder="Rechercher un produit…" value="${q.replace(/"/g,"&quot;")}" data-i="q">
+ <div class="row"><input id="fl" placeholder="Libellé (optionnel)" style="flex:2;min-width:120px"><input id="fa" placeholder="Montant libre €" inputmode="decimal" style="flex:1;min-width:90px"><button data-a="free">+ Montant libre</button></div>
+ <div class="cats">${cats.map((c,i)=>`<button class="${c==cat?"on":""}" data-a="cat" data-v="${i}">${c}</button>`).join("")}</div>
+ <div class="grid" id="grid"></div></div>
+ <div class="card ticket"><button class="mob" data-a="goTop" style="margin-bottom:8px">↑ Produits</button><h3 style="margin:0 0 6px">Ticket en cours</h3>${lines}
+ <div class="tips"><span class="mut">Pourboire</span>${[["eur",0,"Sans"],["eur",1,"1 €"],["eur",2,"2 €"],["eur",5,"5 €"],["pct",5,"5 %"],["pct",10,"10 %"]].map(([k,v,l])=>`<button class="${tipMode.t==k&&tipMode.v==v?"on":""}" data-a="tip" data-v="${k}:${v}">${l}</button>`).join("")}<input id="tipv" inputmode="decimal" placeholder="Autre €" data-i="tip" style="width:90px" value="${tipMode.t=="eur"&&![0,1,2,5].includes(tipMode.v)?tipMode.v:""}"></div>
+ <div class="tot"><span>Total</span><span id="gt">${eur(g)}</span></div><p class="mut" id="tipl" style="margin:-6px 0 8px">${tipAmt()?"dont pourboire "+eur(tipAmt()):""}</p>
+ <div class="pay">${["Espèces","CB","Autre"].map(m=>`<button class="${pay==m?"on":""}" data-a="pay" data-v="${m}">${m}</button>`).join("")}</div>
+ ${pay=="Espèces"?`<input id="given" inputmode="decimal" placeholder="Montant reçu (€)" value="${given}" data-i="given"><p id="chg" class="mut"></p>`:""}
+ <div id="payblk">${payBlock(g)}</div>
+ <div class="row"><button class="pri" style="flex:1" id="vbtn" data-a="validate" ${g?"":"disabled"}>Encaisser ${g?eur(g):""}</button><button class="dng" data-a="clearCart">Vider</button></div></div>${nb?`<div class="bar"><button class="pri" data-a="goTicket">Voir le ticket · ${eur(g)}</button></div>`:""}</div>`;
+}
+function refreshTot(){const g=grand(),tp=tipAmt();const a=$("#gt");if(a)a.textContent=eur(g);const l=$("#tipl");if(l)l.textContent=tp?"dont pourboire "+eur(tp):"";const bb=$(".bar button");if(bb)bb.textContent="Voir le ticket · "+eur(g);const v=$("#vbtn");if(v){v.textContent="Encaisser "+(g?eur(g):"");v.disabled=!g}const p=$("#payblk");if(p)p.innerHTML=payBlock(g);chg()}
+function chg(){const t=grand(),g=parseFloat(String(given).replace(",","."))||0;const e=$("#chg");if(e)e.textContent=g?(g>=t?"Rendu monnaie : "+eur(g-t):"Il manque "+eur(t-g)):""}
+function vHisto(){
+ const day=new Date().toDateString(),td=S.sales.filter(s=>new Date(s.t).toDateString()==day);
+ const sum=a=>a.reduce((x,s)=>x+s.total,0),by=m=>sum(td.filter(s=>s.pay.startsWith(m)));
+ return`<div class="row"><div class="card stat">Aujourd’hui<b>${eur(sum(td))}</b><span class="mut">${td.length} ticket(s)</span></div>
+ <div class="card stat">Espèces<b>${eur(by("Espèces"))}</b></div><div class="card stat">CB<b>${eur(by("CB"))}</b></div><div class="card stat">Autre<b>${eur(by("Autre"))}</b></div><div class="card stat">Pourboires<b>${eur(td.reduce((x,s)=>x+(s.tip||0),0))}</b></div></div>
+ <div class="row"><button data-a="csv">Exporter en CSV</button><button class="dng" data-a="clearAll">Effacer l’historique</button></div>
+ <div class="card scroll"><table><tr><th>Date</th><th>Articles</th><th>Paiement</th><th>Total</th><th></th></tr>
+ ${S.sales.slice().reverse().map((s,i)=>`<tr><td class="w">${new Date(s.t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"})}</td><td>${s.items.map(i=>i.qty+"× "+i.name).join(", ")}${s.tip?" + pourboire "+eur(s.tip):""}</td><td>${s.pay}</td><td class="w"><b>${eur(s.total)}</b></td><td class="w"><button data-a="ticket" data-v="${S.sales.length-1-i}">Ticket</button> <button class="dng" data-a="del" data-v="${S.sales.length-1-i}">✕</button></td></tr>`).join("")||'<tr><td class="mut">Aucune vente.</td></tr>'}</table></div>`;
+}
+function del(i){if(confirm("Annuler cette vente ?")){const s=S.sales[i];if(DB&&s.id)DB.doc("sales/"+s.id).delete().catch(()=>{});else{S.sales.splice(i,1);save();render()}}}
+function vProd(){
+ return`<div class="card"><h3 style="margin:0 0 8px">Paiement par carte SumUp</h3><p class="mut" style="margin:0 0 8px">Clé d’affiliation à créer sur me.sumup.com/developers.</p><div class="row"><input id="ck" placeholder="Clé d’affiliation" value="${CFG.key}" style="flex:2"><input id="ca" placeholder="Identifiant d’appli" value="${CFG.appid}" style="flex:1"><button class="pri" data-a="saveCfg">Enregistrer</button></div></div>
+ <div class="card" style="margin-top:12px"><h3 style="margin:0 0 8px">Ajouter un produit</h3><div class="row"><input id="pn" placeholder="Nom" style="flex:2"><input id="pp" placeholder="Prix €" inputmode="decimal" style="flex:1"><input id="pc" placeholder="Catégorie" style="flex:1"><button class="pri" data-a="addP">Ajouter</button></div></div>
+ <div class="card scroll" style="margin-top:12px"><table><tr><th>Produit</th><th>Catégorie</th><th>Prix</th><th></th></tr>
+ ${S.products.map(p=>`<tr><td>${p.name}</td><td>${p.cat}</td><td class="w">${eur(p.price)}</td><td class="w"><button data-a="editP" data-v="${p.id}">Modifier</button> <button class="dng" data-a="delP" data-v="${p.id}">✕</button></td></tr>`).join("")}</table></div>`;
+}
+function addP(){const n=$("#pn").value.trim(),p=parseFloat($("#pp").value.replace(",",".")),c=$("#pc").value.trim()||"Divers";if(!n||isNaN(p))return;S.products.push({id:Date.now(),name:n,price:p,cat:c});saveP()}
+function editP(id){const p=prod(id),n=prompt("Nom",p.name);if(n===null)return;const pr=prompt("Prix (€)",p.price);if(pr===null)return;const c=prompt("Catégorie",p.cat);p.name=n||p.name;p.price=parseFloat(String(pr).replace(",","."))||p.price;p.cat=c||p.cat;saveP()}
+function delP(id){if(confirm("Supprimer ce produit ?")){S.products=S.products.filter(p=>p.id!=id);delete cart[id];saveP()}}
+function render(){
+ $("#date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+" · "+({live:"🟢 synchronisé",local:"⚪ local",connecting:"🟡 connexion…",slow:"🟠 hors ligne ?"}[sync]||"");
+ drawNav();
+ $("#app").innerHTML=tab=="caisse"?vCaisse():tab=="histo"?vHisto():vProd();
+ if(tab=="caisse"){drawGrid();chg()}
+}
+const ACT={add:(v,b)=>add(+v,+b.dataset.d),addP,goTicket:()=>{const e=document.querySelector(".ticket");if(e)e.scrollIntoView({behavior:"smooth"})},goTop:()=>window.scrollTo({top:0,behavior:"smooth"}),clearCart:()=>{cart={};CUSTOM=[];tipMode={t:"eur",v:0};given="";render()},tip:v=>{const[k,n]=v.split(":");tipMode={t:k,v:+n};render()},free:()=>{const a=parseFloat(String($("#fa").value).replace(",","."));if(!(a>0))return;const id=-(++cn);CUSTOM.push({id,name:$("#fl").value.trim()||"Montant libre",price:a,cat:"Libre"});add(id,1)},clearAll,csv,del:v=>del(+v),delP:v=>delP(+v),editP:v=>editP(+v),pay:v=>{pay=v;render()},cat:v=>setCat(+v),ticket:v=>showTicket(S.sales[+v]),tab:v=>{tab=v;render()},validate,saveCfg};
+document.addEventListener("click",e=>{if(e.target.closest("[data-pay]"))savePending();const b=e.target.closest("[data-a]");if(!b||b.disabled)return;const f=ACT[b.dataset.a];if(f)f(b.dataset.v,b)});
+document.addEventListener("input",e=>{const x=e.target;if(x.dataset.i=="q"){q=x.value;drawGrid()}else if(x.dataset.i=="given"){given=x.value;chg()}else if(x.dataset.i=="tip"){tipMode={t:"eur",v:parseFloat(String(x.value).replace(",","."))||0};refreshTot()}});
+handleReturn();render();initDb();if(returnSale)showTicket(returnSale);if(returnMsg)alert(returnMsg);
+</script>
+<script type="module">
+const EMAIL="caisse@vergerdeslouves.fr";
+try{
+ const V="10.14.1",B="https://www.gstatic.com/firebasejs/"+V+"/";
+ const {initializeApp}=await import(B+"firebase-app.js");
+ const {getAuth,onAuthStateChanged,signInWithEmailAndPassword}=await import(B+"firebase-auth.js");
+ const F=await import(B+"firebase-firestore.js");
+ const app=initializeApp({apiKey:"AIzaSyA4gZNKa_-v8cq9KouitpoFLwyNbtWwCl4",authDomain:"verger-caisse.firebaseapp.com",projectId:"verger-caisse",storageBucket:"verger-caisse.firebasestorage.app",messagingSenderId:"682849701036",appId:"1:682849701036:web:2be81c70af8547e3976309"});
+ const auth=getAuth(app);
+ let db;
+ try{db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})})}catch(e){db=F.getFirestore(app)}
+ const snap=d=>({id:d.id,data:()=>d.data()});
+ const mk=(c,q)=>({orderBy:(f,dir)=>mk(c,F.query(q,F.orderBy(f,dir))),onSnapshot:(n,er)=>F.onSnapshot(q,s=>n({docs:s.docs.map(snap)}),er),get:()=>F.getDocs(q).then(s=>({docs:s.docs.map(snap)})),add:d=>F.addDoc(c,d)});
+ const adapter={
+  doc:p=>({set:d=>F.setDoc(F.doc(db,p),d),delete:()=>F.deleteDoc(F.doc(db,p)),onSnapshot:(n,er)=>F.onSnapshot(F.doc(db,p),s=>n({exists:s.exists(),id:s.id,data:()=>s.data()}),er)}),
+  collection:p=>{const c=F.collection(db,p);return mk(c,c)}
+ };
+ window.FB={auth,adapter,signIn:pw=>signInWithEmailAndPassword(auth,EMAIL,pw)};
+ window.FBREADY=true;
+ onAuthStateChanged(auth,u=>{window.FBUSER=u;window.dispatchEvent(new Event("fb-auth"))});
+}catch(e){console.error(e);window.FBFAIL=true;window.dispatchEvent(new Event("fb-fail"))}
+</script>
+</body>
+</html>
