@@ -258,7 +258,10 @@ function vProd(){
 function addP(){const n=$("#pn").value.trim(),p=parseFloat($("#pp").value.replace(",",".")),c=$("#pc").value.trim()||"Divers";if(!n||isNaN(p))return;S.products.push({id:Date.now(),name:n,price:p,cat:c});saveP()}
 function editP(id){const p=prod(id),n=prompt("Nom",p.name);if(n===null)return;const pr=prompt("Prix (€)",p.price);if(pr===null)return;const c=prompt("Catégorie",p.cat);p.name=n||p.name;p.price=parseFloat(String(pr).replace(",","."))||p.price;p.cat=c||p.cat;saveP()}
 function delP(id){if(confirm("Supprimer ce produit ?")){S.products=S.products.filter(p=>p.id!=id);delete cart[id];saveP()}}
+function saveDraft(){try{localStorage.setItem("vdl-draft",JSON.stringify({cart,custom:CUSTOM,tipMode,parts,splitN,splitStart,pay}))}catch(e){}}
+function restoreDraft(){try{const d=JSON.parse(localStorage.getItem("vdl-draft")||"null");if(!d)return;cart=d.cart||{};CUSTOM=d.custom||[];tipMode=d.tipMode||{t:"eur",v:0};parts=d.parts||[];splitN=d.splitN||0;splitStart=d.splitStart||0;pay=d.pay||"Espèces";cn=CUSTOM.reduce((m,p)=>Math.max(m,-p.id),0)}catch(e){}}
 function render(){
+ saveDraft();
  $("#date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+" · "+({live:"🟢 synchronisé",local:"⚪ local",connecting:"🟡 connexion…",slow:"🟠 hors ligne ?"}[sync]||"");
  drawNav();
  $("#app").innerHTML=tab=="caisse"?vCaisse():tab=="histo"?vHisto():vProd();
@@ -268,7 +271,7 @@ const ACT={add:(v,b)=>add(+v,+b.dataset.d),addP,goTicket:()=>{const e=document.q
 document.addEventListener("click",e=>{if(e.target.closest("[data-pay]"))savePending();const b=e.target.closest("[data-a]");if(!b||b.disabled)return;const f=ACT[b.dataset.a];if(f)f(b.dataset.v,b)});
 document.addEventListener("input",e=>{const x=e.target;if(x.dataset.i=="q"){q=x.value;drawGrid()}else if(x.dataset.i=="given"){given=x.value;chg()}else if(x.dataset.i=="amt"){amtStr=x.value;refreshTot()}else if(x.dataset.i=="tip"){if(parts.length)return;tipMode={t:"eur",v:parseFloat(String(x.value).replace(",","."))||0};refreshTot()}});
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
-handleReturn();render();initDb();if(returnSale)showTicket(returnSale);if(returnMsg)alert(returnMsg);
+restoreDraft();handleReturn();render();initDb();if(returnSale)showTicket(returnSale);if(returnMsg)alert(returnMsg);
 </script>
 <script type="module">
 const EMAIL="caisse@vergerdeslouves.fr";
