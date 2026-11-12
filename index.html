@@ -60,6 +60,7 @@ a.btn.alt{background:var(--surf);color:var(--tx);border:1px solid var(--bd);font
 @media(max-width:480px){.script{font-size:28px}.logo{width:52px;height:52px}header{padding:8px 12px}.brand{gap:10px}main{padding-left:10px;padding-right:10px}nav{padding:8px 10px}.topbar{padding:6px 10px}}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
 .rc{background:#fff;color:#222;border-radius:12px;padding:18px;max-width:380px;width:100%;max-height:90vh;overflow:auto}
+.rc button{background:#f3f3f3;color:#222;border:1px solid #cfcfcf}.rc button.pri{background:var(--ac);color:var(--act);border-color:var(--ac)}.rc button:disabled{opacity:.5}
 .rc pre{font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;margin:0 0 12px}
 @media print{body>*:not(.ov){display:none!important}.ov{position:static;background:none;padding:0}.rc .row,.rc input{display:none}.rc{max-width:none}}
 </style>
@@ -162,6 +163,34 @@ function csv(){
 function drawNav(){
  $("#nav").innerHTML=[["caisse","Caisse"],["histo","Ventes"],["prod","Produits"]].map(([k,l])=>`<button class="${tab==k?"on":""}" data-a="tab" data-v="${k}">${l}</button>`).join("");
 }
+function ticketNo(s){const i=S.sales.findIndex(x=>x.t===s.t);return String((i>=0?i:S.sales.length)+1).padStart(5,"0")}
+function wrapLine(s,n){if(s.length<=n)return[s];const o=[];let c="";for(const w of s.split(" ")){if((c?c+" ":"").length+w.length>n){if(c)o.push(c);c=w}else c=c?c+" "+w:w}if(c)o.push(c);return o}
+function toWin(s){let o="";for(const ch of s){const c=ch.codePointAt(0);if(c<128)o+=ch;else if(c>=0xA0&&c<=0xFF)o+=String.fromCharCode(c);else if(c==0x20AC)o+="\x80";else if(c==0x2019)o+="'";else if(c==0x2013||c==0x2014)o+="-";else if(c==0x202F)o+=" ";else o+="?"}return o}
+function ticketPdf(s){
+ const lines=ticketText(s).replace(/€/g,"EUR").split("\n").flatMap(l=>wrapLine(l,34)).map(toWin);
+ const W=226,M=14,FS=9.5,LH=12,LG=88;
+ let jpg=null;const lg=document.querySelector(".logo");
+ if(lg&&lg.complete&&lg.naturalWidth){try{const c=document.createElement("canvas");c.width=c.height=220;const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,220,220);x.drawImage(lg,0,0,220,220);jpg=atob(c.toDataURL("image/jpeg",0.9).split(",")[1])}catch(e){jpg=null}}
+ const H=Math.ceil(M*2+(jpg?LG+10:0)+lines.length*LH);
+ const esc=x=>x.replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(/\)/g,"\\)");
+ let cs="";
+ if(jpg)cs+="q "+LG+" 0 0 "+LG+" "+((W-LG)/2)+" "+(H-M-LG)+" cm /Im1 Do Q\n";
+ let y=H-M-(jpg?LG+10:0)-FS;
+ lines.forEach(l=>{cs+="BT /F1 "+FS+" Tf "+M+" "+y.toFixed(2)+" Td ("+esc(l)+") Tj ET\n";y-=LH});
+ const ob=[];
+ ob.push("<< /Type /Catalog /Pages 2 0 R >>");
+ ob.push("<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+ ob.push("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 "+W+" "+H+"] /Resources << /Font << /F1 4 0 R >>"+(jpg?" /XObject << /Im1 6 0 R >>":"")+" >> /Contents 5 0 R >>");
+ ob.push("<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>");
+ ob.push("<< /Length "+cs.length+" >>\nstream\n"+cs+"endstream");
+ if(jpg)ob.push("<< /Type /XObject /Subtype /Image /Width 220 /Height 220 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length "+jpg.length+" >>\nstream\n"+jpg+"\nendstream");
+ let out="%PDF-1.4\n";const of=[];
+ ob.forEach((o,i)=>{of.push(out.length);out+=(i+1)+" 0 obj\n"+o+"\nendobj\n"});
+ const xr=out.length;
+ out+="xref\n0 "+(ob.length+1)+"\n0000000000 65535 f \n"+of.map(o=>String(o).padStart(10,"0")+" 00000 n \n").join("")+"trailer\n<< /Size "+(ob.length+1)+" /Root 1 0 R >>\nstartxref\n"+xr+"\n%%EOF";
+ const u=new Uint8Array(out.length);for(let i=0;i<out.length;i++)u[i]=out.charCodeAt(i)&255;
+ return new Blob([u],{type:"application/pdf"});
+}
 function ticketText(s){
  const i=S.sales.findIndex(x=>x.t===s.t),no=String((i>=0?i:S.sales.length)+1).padStart(5,"0"),D="--------------------------------";
  const L=["AU VERGER DES LOUVES"];
@@ -181,15 +210,14 @@ function closeTk(){const o=$("#ov");if(o)o.remove()}
 function showTicket(s){
  closeTk();
  const d=document.createElement("div");d.className="ov";d.id="ov";
- d.innerHTML='<div class="rc"><div style="text-align:center;margin-bottom:6px"><img id="tklogo" alt="" style="width:110px;height:110px"></div><pre id="tk"></pre><input id="tkTo" placeholder="E-mail ou téléphone du client" style="margin-bottom:10px;background:#fff;color:#222"><div class="row"><button class="pri" id="tkC">Copier</button><button id="tkM">E-mail</button><button id="tkP">SMS</button><button id="tkS">Partager</button><button id="tkI">Imprimer</button><button id="tkX">Fermer</button></div></div>';
+ d.innerHTML='<div class="rc"><div style="text-align:center;margin-bottom:6px"><img id="tklogo" alt="" style="width:110px;height:110px"></div><pre id="tk"></pre><div class="row"><button class="pri" id="tkS">Envoyer le PDF</button><button id="tkD">Télécharger le PDF</button><button id="tkI">Imprimer</button><button id="tkX">Fermer</button></div></div>';
  document.body.appendChild(d);
- const txt=ticketText(s);$("#tk").textContent=txt;const lg=document.querySelector(".logo");if(lg)$("#tklogo").src=lg.src;
- const go=u=>{const a=document.createElement("a");a.href=u;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove()};
- const to=()=>$("#tkTo").value.trim();
- $("#tkC").onclick=async()=>{try{await navigator.clipboard.writeText(txt)}catch(e){const t=document.createElement("textarea");t.value=txt;document.body.appendChild(t);t.select();try{document.execCommand("copy")}catch(_){}t.remove()}$("#tkC").textContent="Copié ✔"};
- $("#tkM").onclick=()=>go("mailto:"+encodeURIComponent(to())+"?subject="+encodeURIComponent("Votre ticket – Au Verger des Louves")+"&body="+encodeURIComponent(txt));
- $("#tkP").onclick=()=>go("sms:"+to().replace(/[^\d+]/g,"")+"?&body="+encodeURIComponent(txt));
- if(navigator.share)$("#tkS").onclick=()=>navigator.share({title:"Ticket",text:txt}).catch(()=>{});else $("#tkS").remove();
+ $("#tk").textContent=ticketText(s);
+ const lg=document.querySelector(".logo");if(lg)$("#tklogo").src=lg.src;
+ const mk=()=>new File([ticketPdf(s)],"ticket-"+ticketNo(s)+".pdf",{type:"application/pdf"});
+ const dl=f=>{const u=URL.createObjectURL(f),a=document.createElement("a");a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)};
+ $("#tkS").onclick=async()=>{const f=mk();try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:"Ticket – Au Verger des Louves"});return}}catch(e){if(e&&e.name==="AbortError")return}dl(f)};
+ $("#tkD").onclick=()=>dl(mk());
  $("#tkI").onclick=()=>window.print();
  $("#tkX").onclick=closeTk;
 }
