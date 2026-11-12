@@ -76,7 +76,8 @@ const DEF=[{"id": 1, "name": "KOTA 4 personnes et plus", "price": 80.0, "cat": "
 let S={products:DEF,sales:[]},cart={},cat="Tout",cats=["Tout"],tab="caisse",pay="Espèces",given="",q="";
 try{const r=localStorage.getItem("vdl-caisse-v2");if(r)S=JSON.parse(r)}catch(e){}
 let DB=null,sync="local";
-let CFG={key:"sup_afk_FSLqmXAbEqryMCY1zJe5knjWk0nF1WuB",appid:"fr.vergerdeslouves.caisse"};
+let CFG={key:"sup_afk_FSLqmXAbEqryMCY1zJe5knjWk0nF1WuB",appid:"fr.vergerdeslouves.caisse",legal:"",siret:"",tva:"TVA non applicable, art. 293 B du CGI",foot:"Merci de votre visite !"};
+const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
 try{const c=localStorage.getItem("vdl-cfg");if(c)CFG={...CFG,...JSON.parse(c)}}catch(e){}
 const save=()=>{try{localStorage.setItem("vdl-caisse-v2",JSON.stringify(S))}catch(e){}};
 const saveP=()=>{save();if(DB)DB.doc("config/products").set({list:S.products,t:Date.now()}).catch(()=>{});render()};
@@ -162,18 +163,27 @@ function drawNav(){
  $("#nav").innerHTML=[["caisse","Caisse"],["histo","Ventes"],["prod","Produits"]].map(([k,l])=>`<button class="${tab==k?"on":""}" data-a="tab" data-v="${k}">${l}</button>`).join("");
 }
 function ticketText(s){
- const L=["AU VERGER DES LOUVES","2 Rue Charles Tschamber","68510 Helfrantzkirch","Tél. 06 89 13 02 02","info@vergerdeslouves.fr","",new Date(s.t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}),"--------------------------------"];
+ const i=S.sales.findIndex(x=>x.t===s.t),no=String((i>=0?i:S.sales.length)+1).padStart(5,"0"),D="--------------------------------";
+ const L=["AU VERGER DES LOUVES"];
+ if(CFG.legal)L.push(CFG.legal);
+ L.push("2 Rue Charles Tschamber","68510 Helfrantzkirch","Tél. 06 89 13 02 02","info@vergerdeslouves.fr");
+ if(CFG.siret)L.push("SIRET : "+CFG.siret);
+ L.push("",new Date(s.t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"})+"   Ticket n° "+no,D);
  s.items.forEach(i=>{L.push(i.qty+" x "+i.name);L.push("      "+eur(i.price)+" = "+eur(i.qty*i.price))});
- L.push("--------------------------------",...(s.tip?["Pourboire : "+eur(s.tip)]:[]),"TOTAL : "+eur(s.total),...(s.payments?s.payments.map(p=>"  "+p.pay+" : "+eur(p.amt)):["Paiement : "+s.pay]),"","Merci de votre visite !");
+ L.push(D,"TOTAL TTC : "+eur(s.total));
+ if(s.tip)L.push("dont pourboire : "+eur(s.tip));
+ if(s.payments)s.payments.forEach(p=>L.push("  "+p.pay+" : "+eur(p.amt)));else L.push("Paiement : "+s.pay);
+ if(CFG.tva)L.push("",CFG.tva);
+ if(CFG.foot)L.push("",CFG.foot);
  return L.join("\n");
 }
 function closeTk(){const o=$("#ov");if(o)o.remove()}
 function showTicket(s){
  closeTk();
  const d=document.createElement("div");d.className="ov";d.id="ov";
- d.innerHTML='<div class="rc"><pre id="tk"></pre><input id="tkTo" placeholder="E-mail ou téléphone du client" style="margin-bottom:10px;background:#fff;color:#222"><div class="row"><button class="pri" id="tkC">Copier</button><button id="tkM">E-mail</button><button id="tkP">SMS</button><button id="tkS">Partager</button><button id="tkI">Imprimer</button><button id="tkX">Fermer</button></div></div>';
+ d.innerHTML='<div class="rc"><div style="text-align:center;margin-bottom:6px"><img id="tklogo" alt="" style="width:110px;height:110px"></div><pre id="tk"></pre><input id="tkTo" placeholder="E-mail ou téléphone du client" style="margin-bottom:10px;background:#fff;color:#222"><div class="row"><button class="pri" id="tkC">Copier</button><button id="tkM">E-mail</button><button id="tkP">SMS</button><button id="tkS">Partager</button><button id="tkI">Imprimer</button><button id="tkX">Fermer</button></div></div>';
  document.body.appendChild(d);
- const txt=ticketText(s);$("#tk").textContent=txt;
+ const txt=ticketText(s);$("#tk").textContent=txt;const lg=document.querySelector(".logo");if(lg)$("#tklogo").src=lg.src;
  const go=u=>{const a=document.createElement("a");a.href=u;a.target="_blank";a.rel="noopener";document.body.appendChild(a);a.click();a.remove()};
  const to=()=>$("#tkTo").value.trim();
  $("#tkC").onclick=async()=>{try{await navigator.clipboard.writeText(txt)}catch(e){const t=document.createElement("textarea");t.value=txt;document.body.appendChild(t);t.select();try{document.execCommand("copy")}catch(_){}t.remove()}$("#tkC").textContent="Copié ✔"};
@@ -183,7 +193,8 @@ function showTicket(s){
  $("#tkI").onclick=()=>window.print();
  $("#tkX").onclick=closeTk;
 }
-function saveCfg(){CFG={key:$("#ck").value.trim(),appid:$("#ca").value.trim()||"fr.vergerdeslouves.caisse"};try{localStorage.setItem("vdl-cfg",JSON.stringify(CFG))}catch(e){}if(DB)DB.doc("config/settings").set(CFG).catch(()=>{});render()}
+function saveTicketCfg(){CFG={...CFG,legal:$("#cl").value.trim(),siret:$("#cs").value.trim(),tva:$("#ct").value.trim(),foot:$("#cf").value.trim()};try{localStorage.setItem("vdl-cfg",JSON.stringify(CFG))}catch(e){}if(DB)DB.doc("config/settings").set(CFG).catch(()=>{});render()}
+function saveCfg(){CFG={...CFG,key:$("#ck").value.trim(),appid:$("#ca").value.trim()||"fr.vergerdeslouves.caisse"};try{localStorage.setItem("vdl-cfg",JSON.stringify(CFG))}catch(e){}if(DB)DB.doc("config/settings").set(CFG).catch(()=>{});render()}
 function sumupUrl(t){const e=encodeURIComponent,a=t.toFixed(2);return"sumupmerchant://pay/1.0?"+["amount="+a,"total="+a,"currency=EUR","affiliate-key="+e(CFG.key),"app-id="+e(CFG.appid),"title="+e("Au Verger des Louves"),"foreign-tx-id="+e("vdl-"+Date.now()),"callback="+e(CB()),"callbacksuccess="+e(CB()),"callbackfail="+e(CB())].join("&")}
 const CB=()=>location.origin+location.pathname;
 function savePending(){
@@ -250,7 +261,8 @@ function vHisto(){
 }
 function del(i){if(confirm("Annuler cette vente ?")){const s=S.sales[i];if(DB&&s.id)DB.doc("sales/"+s.id).delete().catch(()=>{});else{S.sales.splice(i,1);save();render()}}}
 function vProd(){
- return`<div class="card"><h3 style="margin:0 0 8px">Paiement par carte SumUp</h3><p class="mut" style="margin:0 0 8px">Clé d’affiliation à créer sur me.sumup.com/developers.</p><div class="row"><input id="ck" placeholder="Clé d’affiliation" value="${CFG.key}" style="flex:2"><input id="ca" placeholder="Identifiant d’appli" value="${CFG.appid}" style="flex:1"><button class="pri" data-a="saveCfg">Enregistrer</button></div></div>
+ return`<div class="card" style="margin-bottom:12px"><h3 style="margin:0 0 8px">Mentions du ticket</h3><div class="row"><input id="cl" placeholder="Nom légal / forme juridique" value="${esc(CFG.legal)}" style="flex:2;min-width:180px"><input id="cs" placeholder="N° SIRET" inputmode="numeric" value="${esc(CFG.siret)}" style="flex:1;min-width:140px"></div><div class="row"><input id="ct" placeholder="Mention TVA" value="${esc(CFG.tva)}" style="flex:1;min-width:180px"><input id="cf" placeholder="Message de fin" value="${esc(CFG.foot)}" style="flex:1;min-width:180px"></div><button class="pri" data-a="saveTicketCfg">Enregistrer</button></div>
+ <div class="card"><h3 style="margin:0 0 8px">Paiement par carte SumUp</h3><p class="mut" style="margin:0 0 8px">Clé d’affiliation à créer sur me.sumup.com/developers.</p><div class="row"><input id="ck" placeholder="Clé d’affiliation" value="${CFG.key}" style="flex:2"><input id="ca" placeholder="Identifiant d’appli" value="${CFG.appid}" style="flex:1"><button class="pri" data-a="saveCfg">Enregistrer</button></div></div>
  <div class="card" style="margin-top:12px"><h3 style="margin:0 0 8px">Ajouter un produit</h3><div class="row"><input id="pn" placeholder="Nom" style="flex:2"><input id="pp" placeholder="Prix €" inputmode="decimal" style="flex:1"><input id="pc" placeholder="Catégorie" style="flex:1"><button class="pri" data-a="addP">Ajouter</button></div></div>
  <div class="card scroll" style="margin-top:12px"><table><tr><th>Produit</th><th>Catégorie</th><th>Prix</th><th></th></tr>
  ${S.products.map(p=>`<tr><td>${p.name}</td><td>${p.cat}</td><td class="w">${eur(p.price)}</td><td class="w"><button data-a="editP" data-v="${p.id}">Modifier</button> <button class="dng" data-a="delP" data-v="${p.id}">✕</button></td></tr>`).join("")}</table></div>`;
@@ -267,7 +279,7 @@ function render(){
  $("#app").innerHTML=tab=="caisse"?vCaisse():tab=="histo"?vHisto():vProd();
  if(tab=="caisse"){drawGrid();chg()}
 }
-const ACT={add:(v,b)=>add(+v,+b.dataset.d),addP,goTicket:()=>{const e=document.querySelector(".ticket");if(e)e.scrollIntoView({behavior:"smooth"})},goTop:()=>window.scrollTo({top:0,behavior:"smooth"}),clearCart:()=>{cart={};CUSTOM=[];tipMode={t:"eur",v:0};resetPay();render()},editLine:v=>editLine(+v),rm:v=>rmLine(+v),split:v=>{splitN=+v;splitStart=parts.length;amtStr="";render()},splitGo:()=>{const n=parseInt($("#splitn").value);if(n>=2&&n<=50){splitN=n;splitStart=parts.length;amtStr="";render()}},undoPart:()=>{parts.pop();if(parts.length<splitStart)splitStart=parts.length;amtStr="";render()},tip:v=>{if(parts.length)return;const[k,n]=v.split(":");tipMode={t:k,v:+n};render()},free:()=>{if(parts.length)return;const a=parseFloat(String($("#fa").value).replace(",","."));if(!(a>0))return;const id=-(++cn);CUSTOM.push({id,name:$("#fl").value.trim()||"Montant libre",price:a,cat:"Libre"});add(id,1)},clearAll,csv,del:v=>del(+v),delP:v=>delP(+v),editP:v=>editP(+v),pay:v=>{pay=v;render()},cat:v=>setCat(+v),ticket:v=>showTicket(S.sales[+v]),tab:v=>{tab=v;render()},validate,saveCfg};
+const ACT={add:(v,b)=>add(+v,+b.dataset.d),addP,goTicket:()=>{const e=document.querySelector(".ticket");if(e)e.scrollIntoView({behavior:"smooth"})},goTop:()=>window.scrollTo({top:0,behavior:"smooth"}),clearCart:()=>{cart={};CUSTOM=[];tipMode={t:"eur",v:0};resetPay();render()},editLine:v=>editLine(+v),rm:v=>rmLine(+v),split:v=>{splitN=+v;splitStart=parts.length;amtStr="";render()},splitGo:()=>{const n=parseInt($("#splitn").value);if(n>=2&&n<=50){splitN=n;splitStart=parts.length;amtStr="";render()}},undoPart:()=>{parts.pop();if(parts.length<splitStart)splitStart=parts.length;amtStr="";render()},tip:v=>{if(parts.length)return;const[k,n]=v.split(":");tipMode={t:k,v:+n};render()},free:()=>{if(parts.length)return;const a=parseFloat(String($("#fa").value).replace(",","."));if(!(a>0))return;const id=-(++cn);CUSTOM.push({id,name:$("#fl").value.trim()||"Montant libre",price:a,cat:"Libre"});add(id,1)},clearAll,csv,del:v=>del(+v),delP:v=>delP(+v),editP:v=>editP(+v),pay:v=>{pay=v;render()},cat:v=>setCat(+v),ticket:v=>showTicket(S.sales[+v]),tab:v=>{tab=v;render()},validate,saveCfg,saveTicketCfg};
 document.addEventListener("click",e=>{if(e.target.closest("[data-pay]"))savePending();const b=e.target.closest("[data-a]");if(!b||b.disabled)return;const f=ACT[b.dataset.a];if(f)f(b.dataset.v,b)});
 document.addEventListener("input",e=>{const x=e.target;if(x.dataset.i=="q"){q=x.value;drawGrid()}else if(x.dataset.i=="given"){given=x.value;chg()}else if(x.dataset.i=="amt"){amtStr=x.value;refreshTot()}else if(x.dataset.i=="tip"){if(parts.length)return;tipMode={t:"eur",v:parseFloat(String(x.value).replace(",","."))||0};refreshTot()}});
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
