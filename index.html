@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#a2bd54">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Allura&family=Lexend:wght@400;600&family=Lora:wght@600;700&display=swap">
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -53,6 +54,9 @@ td.w{white-space:nowrap}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
 .stat{flex:1;min-width:130px}.stat b{font-family:"Lora",Georgia,serif;font-size:22px;display:block}
 a.btn{display:block;text-align:center;text-decoration:none;color:var(--act);background:var(--ac);font-weight:600;border-radius:10px;padding:12px 14px;margin-bottom:8px}
+nav{overflow-x:auto}nav button{flex:none;white-space:nowrap}
+.low{color:var(--warn)}
+.rc input{color:#222;background:#fff}.rc .li{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #ddd}
 .tips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px}.tips button{padding:6px 10px}
 a.btn.alt{background:var(--surf);color:var(--tx);border:1px solid var(--bd);font-weight:400}
 .bar,.mob{display:none}
@@ -63,13 +67,7 @@ a.btn.alt{background:var(--surf);color:var(--tx);border:1px solid var(--bd);font
 .rc button{background:#f3f3f3;color:#222;border:1px solid #cfcfcf}.rc button.pri{background:var(--ac);color:var(--act);border-color:var(--ac)}.rc button:disabled{opacity:.5}
 .rc pre{font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;margin:0 0 12px}
 @media print{body>*:not(.ov){display:none!important}.ov{position:static;background:none;padding:0}.rc .row,.rc input{display:none}.rc{max-width:none}}
-.kota{border-left:6px solid var(--ac);margin-bottom:10px}
-.lbls{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.lbl{border:1px dashed #bbb;border-radius:8px;padding:8px;text-align:center;break-inside:avoid;page-break-inside:avoid}
-.lbl img,.lbl canvas{width:100%;max-width:120px;height:auto;margin:0 auto 4px;display:block}
-.lbl b{display:block;font-size:12px;line-height:1.2}.lbl span{font-size:11px;color:#555}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <div class="topbar" id="date"></div>
@@ -80,9 +78,10 @@ a.btn.alt{background:var(--surf);color:var(--tx);border:1px solid var(--bd);font
 <script>
 const eur=n=>n.toLocaleString("fr-FR",{style:"currency",currency:"EUR"});
 const DEF=[{"id": 1, "name": "KOTA 4 personnes et plus", "price": 80.0, "cat": "Kota"}, {"id": 2, "name": "Kota 2 personnes", "price": 50.0, "cat": "Kota"}, {"id": 3, "name": "Kota 3 personnes", "price": 70.0, "cat": "Kota"}, {"id": 4, "name": "Fondue 3 Viandes - Enfant", "price": 20.0, "cat": "Repas"}, {"id": 5, "name": "Fondue 3 Viandes Adulte", "price": 35.0, "cat": "Repas"}, {"id": 6, "name": "Fondue Adulte", "price": 35.0, "cat": "Repas"}, {"id": 7, "name": "Fondue enfant", "price": 20.0, "cat": "Repas"}, {"id": 8, "name": "Grillade Adulte", "price": 35.0, "cat": "Repas"}, {"id": 9, "name": "Grillade enfant", "price": 20.0, "cat": "Repas"}, {"id": 10, "name": "Mont d’Or Adulte", "price": 35.0, "cat": "Repas"}, {"id": 11, "name": "Mont d’Or enfant", "price": 20.0, "cat": "Repas"}, {"id": 12, "name": "Planchette Charcuterie", "price": 15.0, "cat": "Repas"}, {"id": 13, "name": "Raclette Adulte", "price": 35.0, "cat": "Repas"}, {"id": 14, "name": "Raclette enfant", "price": 20.0, "cat": "Repas"}, {"id": 15, "name": "Repas enfant", "price": 8.0, "cat": "Repas"}, {"id": 16, "name": "Formule ( Plat, Dessert) Adulte", "price": 25.0, "cat": "Table D'hôtes"}, {"id": 17, "name": "Formule ( Plat, Dessert) enfants", "price": 15.0, "cat": "Table D'hôtes"}, {"id": 18, "name": "Formule (Entrée, Plat, Dessert) Adulte", "price": 35.0, "cat": "Table D'hôtes"}, {"id": 19, "name": "Formule (Entrée, Plat, Dessert) Enfants", "price": 20.0, "cat": "Table D'hôtes"}, {"id": 20, "name": "Tartes Flambées", "price": 12.0, "cat": "Table D'hôtes"}, {"id": 21, "name": "Bière - Pression (Petit)", "price": 3.5, "cat": "Événements"}, {"id": 22, "name": "Bière - Pression (Grand)", "price": 6.0, "cat": "Événements"}, {"id": 23, "name": "Café", "price": 1.0, "cat": "Événements"}, {"id": 24, "name": "Cartes Boissons (Carte 10 euros)", "price": 10.0, "cat": "Événements"}, {"id": 25, "name": "Cartes Boissons (Carte 20 Euros)", "price": 20.0, "cat": "Événements"}, {"id": 26, "name": "Crémant (Ice)", "price": 20.0, "cat": "Événements"}, {"id": 27, "name": "Crémant (Normal)", "price": 18.0, "cat": "Événements"}, {"id": 28, "name": "Décoration + Sonos", "price": 120.0, "cat": "Événements"}, {"id": 29, "name": "Entrée (Adulte)", "price": 28.0, "cat": "Événements"}, {"id": 30, "name": "Entrée (Enfant)", "price": 18.0, "cat": "Événements"}, {"id": 31, "name": "Formule Tartes Flambées", "price": 39.0, "cat": "Événements"}, {"id": 32, "name": "Fût de Bière (Brasserie du Réservoir)", "price": 150.0, "cat": "Événements"}, {"id": 33, "name": "Garnitures (Tables + Bancs)", "price": 8.0, "cat": "Événements"}, {"id": 34, "name": "Gonflable", "price": 200.0, "cat": "Événements"}, {"id": 35, "name": "Granité (Petit)", "price": 2.5, "cat": "Événements"}, {"id": 36, "name": "Granité (Grand)", "price": 4.0, "cat": "Événements"}, {"id": 37, "name": "Location Verger", "price": 500.0, "cat": "Événements"}, {"id": 38, "name": "Soft (Ice Tea)", "price": 2.5, "cat": "Événements"}, {"id": 39, "name": "Soft (Coca)", "price": 2.5, "cat": "Événements"}, {"id": 40, "name": "Soft (Eau Gazeuse)", "price": 2.0, "cat": "Événements"}, {"id": 41, "name": "Soft (Eau Plate)", "price": 2.0, "cat": "Événements"}, {"id": 42, "name": "Tartes Flambées à volonté (6 recettes aux choix)", "price": 20.0, "cat": "Événements"}, {"id": 43, "name": "Tonnelle", "price": 100.0, "cat": "Événements"}, {"id": 44, "name": "Vin - Gewurtztraminer (Bouteille)", "price": 15.0, "cat": "Événements"}, {"id": 45, "name": "Vin - Gewurtztraminer (Verre)", "price": 3.0, "cat": "Événements"}, {"id": 46, "name": "Vin - Pinot Gris (Verre)", "price": 3.0, "cat": "Événements"}, {"id": 47, "name": "Vin - Pinot Gris (Bouteille)", "price": 13.0, "cat": "Événements"}, {"id": 48, "name": "Vin - Pinot Noir (Bouteille)", "price": 16.0, "cat": "Événements"}, {"id": 49, "name": "Vin - Pinot Noir (Verre)", "price": 3.0, "cat": "Événements"}, {"id": 50, "name": "Vin - Rosé (Bouteille)", "price": 14.0, "cat": "Événements"}, {"id": 51, "name": "Vin - Rosé (Verre)", "price": 3.0, "cat": "Événements"}, {"id": 52, "name": "Cannettes Bières", "price": 4.5, "cat": "Bières"}, {"id": 53, "name": "IPA", "price": 3.5, "cat": "Bières"}, {"id": 54, "name": "Millésime", "price": 3.5, "cat": "Bières"}, {"id": 55, "name": "Noël", "price": 3.5, "cat": "Bières"}, {"id": 56, "name": "Peter Cascade", "price": 3.5, "cat": "Bières"}, {"id": 57, "name": "Philippe Maurice", "price": 3.5, "cat": "Bières"}, {"id": 58, "name": "Pilsner", "price": 3.5, "cat": "Bières"}, {"id": 59, "name": "Porter", "price": 3.5, "cat": "Bières"}, {"id": 60, "name": "Printemps", "price": 3.5, "cat": "Bières"}, {"id": 61, "name": "Weizen", "price": 3.5, "cat": "Bières"}, {"id": 62, "name": "White IPA", "price": 3.5, "cat": "Bières"}, {"id": 63, "name": "Winterbier", "price": 3.5, "cat": "Bières"}, {"id": 64, "name": "Apremont", "price": 22.0, "cat": "Vins"}, {"id": 65, "name": "Champagne", "price": 50.0, "cat": "Vins"}, {"id": 66, "name": "Chinon", "price": 28.0, "cat": "Vins"}, {"id": 67, "name": "Chinon Perriere", "price": 28.0, "cat": "Vins"}, {"id": 68, "name": "Coussan", "price": 22.0, "cat": "Vins"}, {"id": 69, "name": "Crémant d'Alsace 37,5cl", "price": 13.0, "cat": "Vins"}, {"id": 70, "name": "Crémant d’Alsace 0,75cl", "price": 20.0, "cat": "Vins"}, {"id": 71, "name": "Crémant d’Alsace Muré 0,37cl", "price": 13.0, "cat": "Vins"}, {"id": 72, "name": "Côtes du Rhône", "price": 28.0, "cat": "Vins"}, {"id": 73, "name": "Gewurtztraminer 0,75cl", "price": 15.0, "cat": "Vins"}, {"id": 74, "name": "Gewurtztraminer 0,375cl", "price": 10.5, "cat": "Vins"}, {"id": 75, "name": "Monbazillac", "price": 22.0, "cat": "Vins"}, {"id": 76, "name": "Morgon", "price": 28.0, "cat": "Vins"}, {"id": 77, "name": "Pinot Gris 0,37cl", "price": 9.5, "cat": "Vins"}, {"id": 78, "name": "Pinot Gris 0,75cl", "price": 13.0, "cat": "Vins"}, {"id": 79, "name": "Pinot Noir \"Meyer Thuet\"", "price": 18.0, "cat": "Vins"}, {"id": 80, "name": "Pinot noir 0,37cl", "price": 11.0, "cat": "Vins"}, {"id": 81, "name": "Pinot noir 0,75cl", "price": 18.0, "cat": "Vins"}, {"id": 82, "name": "Prélude", "price": 22.0, "cat": "Vins"}, {"id": 83, "name": "Carola Rouge 1L", "price": 3.0, "cat": "Soft"}, {"id": 84, "name": "Carola bleu 0.5 cl", "price": 2.0, "cat": "Soft"}, {"id": 85, "name": "Carola bleu 1 L", "price": 3.0, "cat": "Soft"}, {"id": 86, "name": "Carola rouge 0.50 cl", "price": 2.0, "cat": "Soft"}, {"id": 87, "name": "Coca cola", "price": 2.5, "cat": "Soft"}, {"id": 88, "name": "Fuzetea", "price": 2.5, "cat": "Soft"}, {"id": 89, "name": "Liqueur de Mirabelles", "price": 14.0, "cat": "Liqueurs"}, {"id": 90, "name": "Liqueur de Quetsches", "price": 14.0, "cat": "Liqueurs"}, {"id": 91, "name": "Vin de Noix", "price": 18.0, "cat": "Liqueurs"}, {"id": 92, "name": "Bijoux", "price": 25.0, "cat": "Suppléments"}, {"id": 93, "name": "Boîte à œufs", "price": 8.0, "cat": "Suppléments"}, {"id": 94, "name": "Confitures", "price": 5.0, "cat": "Suppléments"}, {"id": 95, "name": "Fromage 🧀", "price": 7.0, "cat": "Suppléments"}, {"id": 96, "name": "Jacuzzi Adulte", "price": 12.0, "cat": "Suppléments"}, {"id": 97, "name": "Jacuzzi Enfant", "price": 5.0, "cat": "Suppléments"}, {"id": 98, "name": "Parfum", "price": 20.0, "cat": "Suppléments"}, {"id": 99, "name": "Parking", "price": 5.0, "cat": "Suppléments"}, {"id": 100, "name": "Petit Déjeuner", "price": 10.0, "cat": "Suppléments"}, {"id": 101, "name": "Taxe de Séjour", "price": 1.1, "cat": "Suppléments"}, {"id": 102, "name": "Trajet Aéroport", "price": 30.0, "cat": "Suppléments"}, {"id": 103, "name": "Chambre Personnes supplémentaires", "price": 35.0, "cat": "Romantica & Funny"}, {"id": 104, "name": "Semaine Chambre pour 2 personnes", "price": 85.0, "cat": "Romantica & Funny"}, {"id": 105, "name": "Week-end Chambre pour 2 personnes", "price": 95.0, "cat": "Romantica & Funny"}, {"id": 106, "name": "Roulotte 2 personnes", "price": 120.0, "cat": "Roulotte"}, {"id": 107, "name": "Roulotte Personnes supplémentaires", "price": 35.0, "cat": "Roulotte"}, {"id": 108, "name": "Coffret 6 Bières \" Réservoir\"", "price": 18.0, "cat": "Mes articles"}];
-let S={products:DEF,sales:[]},cart={},cat="Tout",cats=["Tout"],tab="caisse",pay="Espèces",given="",q="";
+let S={products:DEF,sales:[],stock:{}},cart={},cat="Tout",cats=["Tout"],tab="caisse",pay="Espèces",given="",q="";
 try{const r=localStorage.getItem("vdl-caisse-v2");if(r)S=JSON.parse(r)}catch(e){}
-let DB=null,sync="local",KOTA={};
+if(!S.stock)S.stock={};
+let DB=null,sync="local";
 let CFG={key:"sup_afk_FSLqmXAbEqryMCY1zJe5knjWk0nF1WuB",appid:"fr.vergerdeslouves.caisse",legal:"",siret:"",tva:"TVA non applicable, art. 293 B du CGI",foot:"Merci de votre visite !"};
 const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
 try{const c=localStorage.getItem("vdl-cfg");if(c)CFG={...CFG,...JSON.parse(c)}}catch(e){}
@@ -109,8 +108,8 @@ function startSync(){
  const fail=()=>{sync="local";render()};
  DB.doc("config/settings").onSnapshot(s=>{const d=s.exists?s.data():null;if(d){CFG={...CFG,...d};try{localStorage.setItem("vdl-cfg",JSON.stringify(CFG))}catch(e){}render()}},fail);
  DB.doc("config/products").onSnapshot(s=>{const d=s.exists?s.data():null;if(d&&d.list){S.products=d.list;save();render()}else if(!s.exists){DB.doc("config/products").set({list:S.products,t:Date.now()}).catch(()=>{})}},fail);
- DB.doc("kota/ticket").onSnapshot(s=>{const d=s.exists?s.data():null;KOTA=(d&&d.lines)||{};render()},()=>{});
  DB.collection("sales").orderBy("t","asc").onSnapshot(r=>{clearTimeout(timer);S.sales=r.docs.map(d=>({id:d.id,...d.data()}));sync="live";save();render()},fail);
+ DB.collection("stock").onSnapshot(r=>{const m={};r.docs.forEach(d=>{m[d.id]=d.data().qty||0});S.stock=m;save();render()},fail);
  flushOutbox();
 }
 function initDb(){
@@ -135,16 +134,18 @@ const defaultAmt=()=>{const r=remaining(),done=parts.length-splitStart;return(sp
 const due=()=>{const v=parseFloat(String(amtStr).replace(",","."));const r=remaining();return(amtStr!==""&&v>0)?Math.min(Math.round(v*100)/100,r):defaultAmt()};
 function resetPay(){parts=[];splitN=0;splitStart=0;amtStr="";given=""}
 function finalize(){
- const items=Object.entries(cart).filter(([id])=>prod(id)).map(([id,n])=>({name:prod(id).name,price:prod(id).price,qty:n}));
+ const items=Object.entries(cart).filter(([id])=>prod(id)).map(([id,n])=>{const p=prod(id),o={name:p.name,price:p.price,qty:n};if(+id>0)o.pid=+id;if(p.dep)o.dep=p.dep;return o});
  const sale={t:Date.now(),items,total:grand(),pay:parts.length==1?parts[0].pay:"Mixte"};
  if(parts.length>1)sale.payments=parts.map(p=>({amt:p.amt,pay:p.pay}));
  const tp=tipAmt();if(tp)sale.tip=tp;
- if(DB){DB.collection("sales").add(sale).catch(()=>{S.sales.push(sale);save();outboxAdd(sale);render()})}else{S.sales.push(sale);save();outboxAdd(sale)}
+ recordSale(sale);
+ items.forEach(i=>{if(i.pid&&tracked(i.pid))stockAdd(i.pid,-i.qty);if(i.dep)markDepUsed(i.dep)});
  cart={};CUSTOM=[];tipMode={t:"eur",v:0};resetPay();
  return sale;
 }
 function validate(){
- if(!grand())return;
+ if(zeroTk()){parts=[{amt:0,pay:"Acompte"}];const s=finalize();render();showTicket(s);return}
+ if(!(grand()>0))return;
  const d=due();if(!(d>0))return;
  parts.push({amt:d,pay});amtStr="";given="";
  if(remaining()<=0.004){const s=finalize();render();showTicket(s)}else render();
@@ -167,8 +168,92 @@ function csv(){
  const b=new Blob(["\ufeff"+rows.map(r=>r.map(c=>'"'+c.replace(/"/g,'""')+'"').join(";")).join("\n")],{type:"text/csv"});
  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="ventes-verger-des-louves.csv";a.click();
 }
+function recordSale(sale){if(DB){DB.collection("sales").add(sale).catch(()=>{S.sales.push(sale);save();outboxAdd(sale);render()})}else{S.sales.push(sale);save();outboxAdd(sale)}}
+const tracked=pid=>Object.prototype.hasOwnProperty.call(S.stock,pid);
+function stockAdd(pid,n){S.stock[pid]=(S.stock[pid]||0)+n;save();if(DB)DB.doc("stock/"+pid).inc("qty",n).catch(()=>{})}
+function stockSet(pid,n){S.stock[pid]=n;save();if(DB)DB.doc("stock/"+pid).set({qty:n}).catch(()=>{})}
+const normCode=c=>String(c||"").replace(/\D/g,"").replace(/^0+/,"");
+const findByCode=c=>{const k=normCode(c);return k?S.products.find(p=>normCode(p.barcode)===k):null};
+let scanner=null,depPay="Espèces",stockQ="";
+function closeScan(){if(scanner){try{scanner.stop().then(()=>scanner.clear()).catch(()=>{})}catch(e){}scanner=null}const o=document.querySelector("#scan");if(o)o.remove()}
+function openScan(cb){
+ closeScan();
+ const d=document.createElement("div");d.className="ov";d.id="scan";
+ d.innerHTML='<div class="rc"><h3 style="margin:0 0 8px">Scanner un code-barres</h3><div id="qr" style="width:100%"></div><input id="mcode" inputmode="numeric" placeholder="ou saisis le code puis OK" style="margin:8px 0"><div class="row"><button class="pri" id="mok">OK</button><button id="mx">Fermer</button></div></div>';
+ document.body.appendChild(d);
+ const done=c=>{closeScan();cb(c)};
+ $("#mok").onclick=()=>{const v=$("#mcode").value.trim();if(v)done(v)};
+ $("#mcode").onkeydown=e=>{if(e.key=="Enter"){const v=e.target.value.trim();if(v)done(v)}};
+ $("#mx").onclick=closeScan;
+ if(window.Html5Qrcode){try{scanner=new Html5Qrcode("qr");scanner.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:150}},c=>done(c),()=>{}).catch(()=>{$("#qr").textContent="Caméra indisponible : saisis le code."})}catch(e){$("#qr").textContent="Scanner indisponible : saisis le code."}}else $("#qr").textContent="Scanner non chargé : saisis le code.";
+}
+function closeMod(){const o=document.querySelector("#mod");if(o)o.remove()}
+function stockDialog(p,mode){
+ closeMod();
+ const cur=S.stock[p.id]||0;
+ const d=document.createElement("div");d.className="ov";d.id="mod";
+ d.innerHTML='<div class="rc"><h3 style="margin:0 0 6px"></h3><p style="margin:0 0 8px">Stock actuel : <b>'+cur+'</b></p><input id="qn" inputmode="numeric" placeholder="'+(mode=="in"?"Nombre reçu":"Nombre compté")+'" style="margin-bottom:8px"><p id="qp" style="margin:0 0 10px"></p><div class="row"><button class="pri" id="qok">Valider</button><button id="qx">Annuler</button></div></div>';
+ document.body.appendChild(d);
+ d.querySelector("h3").textContent=p.name;
+ const val=()=>{const v=parseInt($("#qn").value);return isNaN(v)?null:v};
+ $("#qn").oninput=()=>{const v=val();$("#qp").textContent=v===null?"":(mode=="in"?"Nouveau stock : "+cur+" + "+v+" = "+(cur+v):"Le stock sera fixé à "+v)};
+ $("#qok").onclick=()=>{const v=val();if(v===null||v<0)return;if(mode=="in")stockAdd(p.id,v);else stockSet(p.id,v);closeMod();render()};
+ $("#qx").onclick=closeMod;
+ setTimeout(()=>{try{$("#qn").focus()}catch(e){}},50);
+}
+function assocDialog(code){
+ closeMod();
+ const d=document.createElement("div");d.className="ov";d.id="mod";
+ d.innerHTML='<div class="rc"><h3 style="margin:0 0 6px">Code inconnu</h3><p style="margin:0 0 8px">À quel article correspond le code '+esc(code)+' ?</p><input id="as" placeholder="Rechercher un article" style="margin-bottom:8px"><div id="al"></div><div class="row"><button id="qx">Annuler</button></div></div>';
+ document.body.appendChild(d);
+ const draw=()=>{const k=$("#as").value.trim().toLowerCase();$("#al").innerHTML=S.products.filter(p=>!k||p.name.toLowerCase().includes(k)).slice(0,8).map(p=>'<div class="li"><span>'+esc(p.name)+'</span><button data-id="'+p.id+'">Choisir</button></div>').join("")};
+ draw();$("#as").oninput=draw;
+ $("#al").onclick=e=>{const b=e.target.closest("button[data-id]");if(!b)return;const p=S.products.find(x=>x.id==b.dataset.id);if(!p)return;p.barcode=String(code).trim();saveP();stockDialog(p,"in")};
+ $("#qx").onclick=closeMod;
+}
+function showDeps(){
+ closeMod();if(parts.length)return;
+ const open=S.sales.filter(s=>s.deposit&&!s.used);
+ const d=document.createElement("div");d.className="ov";d.id="mod";
+ d.innerHTML='<div class="rc"><h3 style="margin:0 0 6px">Acomptes à déduire</h3><div id="dl"></div><div class="row"><button id="qx">Fermer</button></div></div>';
+ document.body.appendChild(d);
+ $("#dl").innerHTML=open.map(s=>'<div class="li"><span>'+esc(s.client||"Acompte")+' — '+eur(s.total)+'</span><button data-t="'+s.t+'">Déduire</button></div>').join("")||"<p>Aucun acompte en attente.</p>";
+ $("#dl").onclick=e=>{const b=e.target.closest("button[data-t]");if(!b)return;const s=open.find(x=>String(x.t)===b.dataset.t);if(!s||CUSTOM.some(c=>c.dep===s.t))return;const id=-(++cn);CUSTOM.push({id,name:"Acompte – "+(s.client||""),price:-s.total,cat:"Acompte",dep:s.t});cart[id]=1;closeMod();render()};
+ $("#qx").onclick=closeMod;
+}
+function markDepUsed(t){const d=S.sales.find(x=>x.t===t&&x.deposit);if(!d)return;d.used=true;d.usedAt=Date.now();save();if(DB&&d.id){const{id,...rest}=d;DB.doc("sales/"+d.id).set(rest).catch(()=>{})}}
+function discount(kind){
+ if(parts.length)return;
+ const v=parseFloat(String($("#rmv").value).replace(",","."));if(!(v>0))return;
+ let a=v,name="Remise";
+ if(kind=="p"){if(v>100)return;const base=Object.entries(cart).reduce((s,[id,n])=>{const p=prod(id);return s+(p&&p.price>0?n*p.price:0)},0);a=Math.round(base*v)/100;name="Remise "+String(v).replace(".",",")+" %"}
+ if(!(a>0))return;
+ const id=-(++cn);CUSTOM.push({id,name,price:-a,cat:"Remise"});cart[id]=1;render();
+}
+function addDeposit(){
+ const c=$("#dc").value.trim(),a=parseFloat(String($("#da").value).replace(",","."));
+ if(!c||!(a>0))return;
+ const note=$("#dn").value.trim();
+ const sale={t:Date.now(),items:[{name:"Acompte – "+c,price:a,qty:1}],total:a,pay:depPay,deposit:true,client:c,used:false};
+ if(note)sale.note=note;
+ recordSale(sale);render();showTicket(sale);
+}
+function vDeps(){
+ const open=S.sales.map((s,i)=>({s,i})).filter(x=>x.s.deposit&&!x.s.used);
+ return`<div class="card"><h3 style="margin:0 0 8px">Nouvel acompte</h3><div class="row"><input id="dc" placeholder="Client / réservation (ex. Dupont – kota 20/12)" style="flex:2;min-width:200px"><input id="da" inputmode="decimal" placeholder="Montant €" style="flex:1;min-width:100px"></div><input id="dn" placeholder="Note (optionnel : date de la réservation…)" style="margin:8px 0"><div class="row">${["Espèces","CB","Virement","Autre"].map(m=>`<button class="${depPay==m?"on":""}" data-a="depPay" data-v="${m}">${m}</button>`).join("")}</div><button class="pri" data-a="addDep">Encaisser l’acompte</button></div>
+ <div class="card" style="margin-top:12px"><h3 style="margin:0 0 8px">Acomptes en attente (${open.length})</h3>${open.map(({s,i})=>`<div class="line"><span class="n"><b>${esc(s.client)}</b> — ${eur(s.total)} (${s.pay})<br><span class="mut">${new Date(s.t).toLocaleDateString("fr-FR")}${s.note?" · "+esc(s.note):""}</span></span><button data-a="depShow" data-v="${i}">Reçu</button><button class="dng" data-a="del" data-v="${i}">✕</button></div>`).join("")||'<p class="mut">Aucun acompte en attente.</p>'}<p class="mut">Pour déduire un acompte, ouvre un ticket dans Caisse et touche « Acompte ».</p></div>`;
+}
+function vStock(){
+ const k=stockQ.trim().toLowerCase();
+ const list=S.products.filter(p=>!k||(p.name+" "+(p.barcode||"")).toLowerCase().includes(k));
+ return`<div class="row"><button class="pri" data-a="stockScan">📷 Scanner / Entrée de stock</button></div>
+ <input placeholder="Rechercher un article ou un code" value="${esc(stockQ)}" data-i="stockq" style="margin-bottom:10px">
+ <div class="card scroll"><table><tr><th>Article</th><th>Code</th><th>Stock</th><th></th></tr>${list.map(p=>{const t=tracked(p.id),n=S.stock[p.id];return`<tr><td>${esc(p.name)}</td><td class="w mut">${esc(p.barcode||"—")}</td><td class="w ${t&&n<=0?"low":""}"><b>${t?n:"—"}</b></td><td class="w"><button data-a="stockIn" data-v="${p.id}">+ Entrée</button> <button data-a="stockInv" data-v="${p.id}">Inventaire</button> <button data-a="bcEdit" data-v="${p.id}">Code</button></td></tr>`}).join("")}</table></div>`;
+}
+const zeroTk=()=>grand()===0&&!parts.length&&Object.values(cart).some(n=>n>0);
+const vb=()=>zeroTk()?{l:"Clôturer (réglé par acompte)",d:false}:{l:"Encaisser "+(due()>0?eur(due()):""),d:!(due()>0)};
 function drawNav(){
- $("#nav").innerHTML=[["caisse","Caisse"],["histo","Ventes"],["prod","Produits"]].map(([k,l])=>`<button class="${tab==k?"on":""}" data-a="tab" data-v="${k}">${l}</button>`).join("");
+ $("#nav").innerHTML=[["caisse","Caisse"],["histo","Ventes"],["deps","Acomptes"],["stock","Stock"],["prod","Produits"]].map(([k,l])=>`<button class="${tab==k?"on":""}" data-a="tab" data-v="${k}">${l}</button>`).join("");
 }
 function ticketNo(s){const i=S.sales.findIndex(x=>x.t===s.t);return String((i>=0?i:S.sales.length)+1).padStart(5,"0")}
 function wrapLine(s,n){if(s.length<=n)return[s];const o=[];let c="";for(const w of s.split(" ")){if((c?c+" ":"").length+w.length>n){if(c)o.push(c);c=w}else c=c?c+" "+w:w}if(c)o.push(c);return o}
@@ -205,8 +290,8 @@ function ticketText(s){
  L.push("2 Rue Charles Tschamber","68510 Helfrantzkirch","Tél. 06 89 13 02 02","info@vergerdeslouves.fr");
  if(CFG.siret)L.push("SIRET : "+CFG.siret);
  L.push("",new Date(s.t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"})+"   Ticket n° "+no,D);
- s.items.forEach(i=>{L.push(i.qty+" x "+i.name);L.push("      "+eur(i.price)+" = "+eur(i.qty*i.price))});
- L.push(D,"TOTAL TTC : "+eur(s.total));
+ if(s.deposit){L.push("REÇU D'ACOMPTE");if(s.client)L.push("Client : "+s.client);if(s.note)L.push(s.note)}else s.items.forEach(i=>{L.push(i.qty+" x "+i.name);L.push("      "+eur(i.price)+" = "+eur(i.qty*i.price))});
+ L.push(D,(s.deposit?"ACOMPTE REÇU : ":"TOTAL TTC : ")+eur(s.total));
  if(s.tip)L.push("dont pourboire : "+eur(s.tip));
  if(s.payments)s.payments.forEach(p=>L.push("  "+p.pay+" : "+eur(p.amt)));else L.push("Paiement : "+s.pay);
  if(CFG.tva)L.push("",CFG.tva);
@@ -262,14 +347,15 @@ function setCat(i){cat=cats[i];render()}
 function drawGrid(){
  const g=$("#grid");if(!g)return;const k=q.trim().toLowerCase();
  const list=S.products.filter(p=>(cat=="Tout"||p.cat==cat)&&(!k||(p.name+" "+p.cat).toLowerCase().includes(k)));
- g.innerHTML=list.map(p=>`<button class="prod" data-a="add" data-v="${p.id}" data-d="1"><b>${p.name}</b><span>${eur(p.price)}</span></button>`).join("")||'<p class="mut">Aucun produit.</p>';
+ g.innerHTML=list.map(p=>`<button class="prod" data-a="add" data-v="${p.id}" data-d="1"><b>${p.name}</b><span>${eur(p.price)}${tracked(p.id)?` · <i class="${S.stock[p.id]<=0?"low":""}">${S.stock[p.id]}</i>`:""}</span></button>`).join("")||'<p class="mut">Aucun produit.</p>';
 }
 function vCaisse(){
  cats=["Tout",...new Set(S.products.map(p=>p.cat))];if(!cats.includes(cat))cat="Tout";
  const t=total(),g=grand(),nb=Object.values(cart).reduce((a,b)=>a+b,0);
  const lines=Object.entries(cart).filter(([id])=>prod(id)).map(([id,n])=>{const p=prod(id);return`<div class="line"><span class="n">${p.name}</span><span class="q"><button data-a="add" data-v="${id}" data-d="-1">−</button>${n}<button data-a="add" data-v="${id}" data-d="1">+</button></span><b>${eur(n*p.price)}</b><button data-a="editLine" data-v="${id}" style="padding:2px 8px">✎</button><button class="dng" data-a="rm" data-v="${id}" style="padding:2px 8px">✕</button></div>`}).join("")||'<p class="mut">Touchez un produit pour l’ajouter.</p>';
- return`<div class="caisse"><div>${kotaBanner()}<input type="search" placeholder="Rechercher un produit…" value="${q.replace(/"/g,"&quot;")}" data-i="q">
+ return`<div class="caisse"><div><input type="search" placeholder="Rechercher un produit…" value="${q.replace(/"/g,"&quot;")}" data-i="q">
  <div class="row"><input id="fl" placeholder="Libellé (optionnel)" style="flex:2;min-width:120px"><input id="fa" placeholder="Montant libre €" inputmode="decimal" style="flex:1;min-width:90px"><button data-a="free">+ Montant libre</button></div>
+ <div class="row"><input id="rmv" inputmode="decimal" placeholder="Remise" style="flex:1;min-width:80px"><button data-a="discE">− €</button><button data-a="discP">− %</button><button data-a="deps">Acompte</button><button data-a="scanAdd">📷</button></div>
  <div class="cats">${cats.map((c,i)=>`<button class="${c==cat?"on":""}" data-a="cat" data-v="${i}">${c}</button>`).join("")}</div>
  <div class="grid" id="grid"></div></div>
  <div class="card ticket"><button class="mob" data-a="goTop" style="margin-bottom:8px">↑ Produits</button><h3 style="margin:0 0 6px">Ticket en cours</h3>${lines}
@@ -281,9 +367,9 @@ function vCaisse(){
  <div class="pay">${["Espèces","CB","Autre"].map(m=>`<button class="${pay==m?"on":""}" data-a="pay" data-v="${m}">${m}</button>`).join("")}</div>
  ${pay=="Espèces"?`<input id="given" inputmode="decimal" placeholder="Montant reçu (€)" value="${given}" data-i="given"><p id="chg" class="mut"></p>`:""}
  <div id="payblk">${payBlock(due())}</div>
- <div class="row"><button class="pri" style="flex:1" id="vbtn" data-a="validate" ${due()>0?"":"disabled"}>Encaisser ${due()>0?eur(due()):""}</button><button class="dng" data-a="clearCart">Vider</button></div></div>${nb?`<div class="bar"><button class="pri" data-a="goTicket">Voir le ticket · ${eur(g)}</button></div>`:""}</div>`;
+ <div class="row"><button class="pri" style="flex:1" id="vbtn" data-a="validate" ${vb().d?"disabled":""}>${vb().l}</button><button class="dng" data-a="clearCart">Vider</button></div></div>${nb?`<div class="bar"><button class="pri" data-a="goTicket">Voir le ticket · ${eur(g)}</button></div>`:""}</div>`;
 }
-function refreshTot(){const g=grand(),tp=tipAmt();const a=$("#gt");if(a)a.textContent=eur(g);const l=$("#tipl");if(l)l.textContent=tp?"dont pourboire "+eur(tp):"";const bb=$(".bar button");if(bb)bb.textContent="Voir le ticket · "+eur(g);const v=$("#vbtn");if(v){v.textContent="Encaisser "+(due()>0?eur(due()):"");v.disabled=!(due()>0)}const p=$("#payblk");if(p)p.innerHTML=payBlock(due());chg()}
+function refreshTot(){const g=grand(),tp=tipAmt();const a=$("#gt");if(a)a.textContent=eur(g);const l=$("#tipl");if(l)l.textContent=tp?"dont pourboire "+eur(tp):"";const bb=$(".bar button");if(bb)bb.textContent="Voir le ticket · "+eur(g);const v=$("#vbtn");if(v){const st=vb();v.textContent=st.l;v.disabled=st.d}const p=$("#payblk");if(p)p.innerHTML=payBlock(due());chg()}
 function chg(){const t=due(),g=parseFloat(String(given).replace(",","."))||0;const e=$("#chg");if(e)e.textContent=g?(g>=t?"Rendu monnaie : "+eur(g-t):"Il manque "+eur(t-g)):""}
 function vHisto(){
  const day=new Date().toDateString(),td=S.sales.filter(s=>new Date(s.t).toDateString()==day);
@@ -294,17 +380,16 @@ function vHisto(){
  <div class="card scroll"><table><tr><th>Date</th><th>Articles</th><th>Paiement</th><th>Total</th><th></th></tr>
  ${S.sales.slice().reverse().map((s,i)=>`<tr><td class="w">${new Date(s.t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"})}</td><td>${s.items.map(i=>i.qty+"× "+i.name).join(", ")}${s.tip?" + pourboire "+eur(s.tip):""}</td><td>${s.payments?s.payments.map(p=>p.pay+" "+eur(p.amt)).join(" + "):s.pay}</td><td class="w"><b>${eur(s.total)}</b></td><td class="w"><button data-a="ticket" data-v="${S.sales.length-1-i}">Ticket</button> <button class="dng" data-a="del" data-v="${S.sales.length-1-i}">✕</button></td></tr>`).join("")||'<tr><td class="mut">Aucune vente.</td></tr>'}</table></div>`;
 }
-function del(i){if(confirm("Annuler cette vente ?")){const s=S.sales[i];if(DB&&s.id)DB.doc("sales/"+s.id).delete().catch(()=>{});else{S.sales.splice(i,1);save();render()}}}
+function del(i){if(confirm("Annuler cette vente ?")){const s=S.sales[i];(s.items||[]).forEach(x=>{if(x.pid&&tracked(x.pid))stockAdd(x.pid,x.qty)});if(DB&&s.id)DB.doc("sales/"+s.id).delete().catch(()=>{});else{S.sales.splice(i,1);save();render()}}}
 function vProd(){
  return`<div class="card" style="margin-bottom:12px"><h3 style="margin:0 0 8px">Mentions du ticket</h3><div class="row"><input id="cl" placeholder="Nom légal / forme juridique" value="${esc(CFG.legal)}" style="flex:2;min-width:180px"><input id="cs" placeholder="N° SIRET" inputmode="numeric" value="${esc(CFG.siret)}" style="flex:1;min-width:140px"></div><div class="row"><input id="ct" placeholder="Mention TVA" value="${esc(CFG.tva)}" style="flex:1;min-width:180px"><input id="cf" placeholder="Message de fin" value="${esc(CFG.foot)}" style="flex:1;min-width:180px"></div><button class="pri" data-a="saveTicketCfg">Enregistrer</button></div>
  <div class="card"><h3 style="margin:0 0 8px">Paiement par carte SumUp</h3><p class="mut" style="margin:0 0 8px">Clé d’affiliation à créer sur me.sumup.com/developers.</p><div class="row"><input id="ck" placeholder="Clé d’affiliation" value="${CFG.key}" style="flex:2"><input id="ca" placeholder="Identifiant d’appli" value="${CFG.appid}" style="flex:1"><button class="pri" data-a="saveCfg">Enregistrer</button></div></div>
  <div class="card" style="margin-top:12px"><h3 style="margin:0 0 8px">Ajouter un produit</h3><div class="row"><input id="pn" placeholder="Nom" style="flex:2"><input id="pp" placeholder="Prix €" inputmode="decimal" style="flex:1"><input id="pc" placeholder="Catégorie" style="flex:1"><button class="pri" data-a="addP">Ajouter</button></div></div>
- <div class="card" style="margin-top:12px"><h3 style="margin:0 0 8px">Étiquettes QR pour le kota</h3><p class="mut" style="margin:0 0 8px">Pour les bouteilles sans code-barres : imprimez une étiquette et collez-la sur la bouteille. Les clients la scannent avec la tablette du kota. Pour un produit qui a déjà un code-barres, renseignez-le avec « Modifier ».</p><button class="pri" data-a="labels">Préparer les étiquettes</button></div>
  <div class="card scroll" style="margin-top:12px"><table><tr><th>Produit</th><th>Catégorie</th><th>Prix</th><th></th></tr>
- ${S.products.map(p=>`<tr><td>${p.name}${p.ean?`<br><span class="mut" style="font-size:12px">Code : ${esc(p.ean)}</span>`:""}</td><td>${p.cat}</td><td class="w">${eur(p.price)}</td><td class="w"><button data-a="editP" data-v="${p.id}">Modifier</button> <button class="dng" data-a="delP" data-v="${p.id}">✕</button></td></tr>`).join("")}</table></div>`;
+ ${S.products.map(p=>`<tr><td>${p.name}</td><td>${p.cat}</td><td class="w">${eur(p.price)}</td><td class="w"><button data-a="editP" data-v="${p.id}">Modifier</button> <button class="dng" data-a="delP" data-v="${p.id}">✕</button></td></tr>`).join("")}</table></div>`;
 }
 function addP(){const n=$("#pn").value.trim(),p=parseFloat($("#pp").value.replace(",",".")),c=$("#pc").value.trim()||"Divers";if(!n||isNaN(p))return;S.products.push({id:Date.now(),name:n,price:p,cat:c});saveP()}
-function editP(id){const p=prod(id),n=prompt("Nom",p.name);if(n===null)return;const pr=prompt("Prix (€)",p.price);if(pr===null)return;const c=prompt("Catégorie",p.cat);if(c===null)return;const b=prompt("Code-barres (facultatif)",p.ean||"");p.name=n||p.name;p.price=parseFloat(String(pr).replace(",","."))||p.price;p.cat=c||p.cat;if(b!==null){const v=b.trim();if(v)p.ean=v;else delete p.ean}saveP()}
+function editP(id){const p=prod(id),n=prompt("Nom",p.name);if(n===null)return;const pr=prompt("Prix (€)",p.price);if(pr===null)return;const c=prompt("Catégorie",p.cat);p.name=n||p.name;p.price=parseFloat(String(pr).replace(",","."))||p.price;p.cat=c||p.cat;const bc=prompt("Code-barres (optionnel)",p.barcode||"");if(bc!==null){if(bc.trim())p.barcode=bc.trim();else delete p.barcode}saveP()}
 function delP(id){if(confirm("Supprimer ce produit ?")){S.products=S.products.filter(p=>p.id!=id);delete cart[id];saveP()}}
 function saveDraft(){try{localStorage.setItem("vdl-draft",JSON.stringify({cart,custom:CUSTOM,tipMode,parts,splitN,splitStart,pay}))}catch(e){}}
 function restoreDraft(){try{const d=JSON.parse(localStorage.getItem("vdl-draft")||"null");if(!d)return;cart=d.cart||{};CUSTOM=d.custom||[];tipMode=d.tipMode||{t:"eur",v:0};parts=d.parts||[];splitN=d.splitN||0;splitStart=d.splitStart||0;pay=d.pay||"Espèces";cn=CUSTOM.reduce((m,p)=>Math.max(m,-p.id),0)}catch(e){}}
@@ -312,42 +397,14 @@ function render(){
  saveDraft();
  $("#date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+" · "+({live:"🟢 synchronisé",local:"⚪ local",connecting:"🟡 connexion…",slow:"🟠 hors ligne ?"}[sync]||"");
  drawNav();
- $("#app").innerHTML=tab=="caisse"?vCaisse():tab=="histo"?vHisto():vProd();
+ $("#app").innerHTML=tab=="caisse"?vCaisse():tab=="histo"?vHisto():tab=="deps"?vDeps():tab=="stock"?vStock():vProd();
  if(tab=="caisse"){drawGrid();chg()}
 }
-const ACT={add:(v,b)=>add(+v,+b.dataset.d),addP,goTicket:()=>{const e=document.querySelector(".ticket");if(e)e.scrollIntoView({behavior:"smooth"})},goTop:()=>window.scrollTo({top:0,behavior:"smooth"}),clearCart:()=>{cart={};CUSTOM=[];tipMode={t:"eur",v:0};resetPay();render()},editLine:v=>editLine(+v),rm:v=>rmLine(+v),split:v=>{splitN=+v;splitStart=parts.length;amtStr="";render()},splitGo:()=>{const n=parseInt($("#splitn").value);if(n>=2&&n<=50){splitN=n;splitStart=parts.length;amtStr="";render()}},undoPart:()=>{parts.pop();if(parts.length<splitStart)splitStart=parts.length;amtStr="";render()},tip:v=>{if(parts.length)return;const[k,n]=v.split(":");tipMode={t:k,v:+n};render()},free:()=>{if(parts.length)return;const a=parseFloat(String($("#fa").value).replace(",","."));if(!(a>0))return;const id=-(++cn);CUSTOM.push({id,name:$("#fl").value.trim()||"Montant libre",price:a,cat:"Libre"});add(id,1)},clearAll,csv,del:v=>del(+v),delP:v=>delP(+v),editP:v=>editP(+v),pay:v=>{pay=v;render()},cat:v=>setCat(+v),ticket:v=>showTicket(S.sales[+v]),tab:v=>{tab=v;render()},validate,saveCfg,saveTicketCfg};
+const ACT={add:(v,b)=>add(+v,+b.dataset.d),addP,scanAdd:()=>openScan(code=>{const p=findByCode(code);if(p)add(p.id,1);else alert("Code inconnu : associe-le à un article dans l’onglet Stock.")}),discE:()=>discount("e"),discP:()=>discount("p"),deps:showDeps,addDep:addDeposit,depPay:v=>{depPay=v;render()},depShow:v=>{const s=S.sales[+v];if(s)showTicket(s)},stockScan:()=>openScan(code=>{const p=findByCode(code);if(p)stockDialog(p,"in");else assocDialog(code)}),stockIn:v=>{const p=prod(+v);if(p)stockDialog(p,"in")},stockInv:v=>{const p=prod(+v);if(p)stockDialog(p,"set")},bcEdit:v=>{const p=prod(+v);if(!p)return;const bc=prompt("Code-barres de "+p.name,p.barcode||"");if(bc===null)return;if(bc.trim())p.barcode=bc.trim();else delete p.barcode;saveP()},goTicket:()=>{const e=document.querySelector(".ticket");if(e)e.scrollIntoView({behavior:"smooth"})},goTop:()=>window.scrollTo({top:0,behavior:"smooth"}),clearCart:()=>{cart={};CUSTOM=[];tipMode={t:"eur",v:0};resetPay();render()},editLine:v=>editLine(+v),rm:v=>rmLine(+v),split:v=>{splitN=+v;splitStart=parts.length;amtStr="";render()},splitGo:()=>{const n=parseInt($("#splitn").value);if(n>=2&&n<=50){splitN=n;splitStart=parts.length;amtStr="";render()}},undoPart:()=>{parts.pop();if(parts.length<splitStart)splitStart=parts.length;amtStr="";render()},tip:v=>{if(parts.length)return;const[k,n]=v.split(":");tipMode={t:k,v:+n};render()},free:()=>{if(parts.length)return;const a=parseFloat(String($("#fa").value).replace(",","."));if(!(a>0))return;const id=-(++cn);CUSTOM.push({id,name:$("#fl").value.trim()||"Montant libre",price:a,cat:"Libre"});add(id,1)},clearAll,csv,del:v=>del(+v),delP:v=>delP(+v),editP:v=>editP(+v),pay:v=>{pay=v;render()},cat:v=>setCat(+v),ticket:v=>showTicket(S.sales[+v]),tab:v=>{tab=v;render()},validate,saveCfg,saveTicketCfg};
 document.addEventListener("click",e=>{if(e.target.closest("[data-pay]"))savePending();const b=e.target.closest("[data-a]");if(!b||b.disabled)return;const f=ACT[b.dataset.a];if(f)f(b.dataset.v,b)});
-document.addEventListener("input",e=>{const x=e.target;if(x.dataset.i=="q"){q=x.value;drawGrid()}else if(x.dataset.i=="given"){given=x.value;chg()}else if(x.dataset.i=="amt"){amtStr=x.value;refreshTot()}else if(x.dataset.i=="tip"){if(parts.length)return;tipMode={t:"eur",v:parseFloat(String(x.value).replace(",","."))||0};refreshTot()}});
-/* ---- Liaison avec la tablette du kota ---- */
-function kotaBanner(){
- const e=Object.entries(KOTA).filter(([id,n])=>n>0&&prod(id));if(!e.length)return"";
- const tot=e.reduce((a,[id,n])=>a+n*prod(id).price,0),nb=e.reduce((a,[,n])=>a+n,0);
- return`<div class="card kota"><b>🔥 Ticket du kota · ${nb} article(s) · ${eur(tot)}</b><p class="mut" style="margin:6px 0 8px">${e.map(([id,n])=>n+"× "+esc(prod(id).name)).join(", ")}</p><div class="row" style="margin:0"><button class="pri" data-a="kotaLoad">Charger dans le panier</button><button class="dng" data-a="kotaClear">Vider</button></div></div>`;
-}
-function kotaLoad(){
- if(parts.length){alert("Terminez d’abord l’encaissement en cours.");return}
- const e=Object.entries(KOTA).filter(([id,n])=>n>0&&prod(id));if(!e.length)return;
- const neg={};e.forEach(([id,n])=>{cart[id]=(cart[id]||0)+n;neg[id]=-n});
- if(DB&&DB.inc)DB.inc("kota/ticket",neg).catch(()=>{});KOTA={};render();
-}
-function kotaClear(){
- if(!confirm("Vider le ticket du kota sans l’encaisser ?"))return;
- const neg={};Object.entries(KOTA).forEach(([id,n])=>{if(n>0)neg[id]=-n});
- if(DB&&DB.inc)DB.inc("kota/ticket",neg).catch(()=>{});KOTA={};render();
-}
-function showLabels(){
- const cats=prompt("Catégories à imprimer (séparées par des virgules)","Vins, Bières, Soft");if(cats===null)return;
- const cs=cats.split(",").map(x=>x.trim().toLowerCase()).filter(Boolean);
- const only=confirm("Seulement les produits sans code-barres ?\n\nOK : seulement ceux sans code-barres\nAnnuler : tous les produits de ces catégories");
- const list=S.products.filter(p=>(!cs.length||cs.includes(String(p.cat).toLowerCase()))&&(!only||!p.ean));
- const d=document.createElement("div");d.className="ov";d.id="lbl";
- d.innerHTML=`<div class="rc" style="max-width:900px"><div class="row" style="margin-bottom:10px"><button class="pri" id="lblp">Imprimer</button><button id="lblc">Fermer</button></div><div class="lbls">${list.map(p=>`<div class="lbl"><div class="lq" data-q="VDL:${p.id}"></div><b>${esc(p.name)}</b><span>${eur(p.price)}</span></div>`).join("")||"<p>Aucun produit.</p>"}</div></div>`;
- document.body.appendChild(d);
- $("#lblp").onclick=()=>window.print();$("#lblc").onclick=()=>d.remove();
- d.querySelectorAll(".lq").forEach(el=>{if(window.QRCode)new QRCode(el,{text:el.dataset.q,width:240,height:240});else el.textContent=el.dataset.q});
-}
-Object.assign(ACT,{kotaLoad,kotaClear,labels:showLabels});
+document.addEventListener("input",e=>{const x=e.target;if(x.dataset.i=="q"){q=x.value;drawGrid()}else if(x.dataset.i=="stockq"){stockQ=x.value;render();const e=document.querySelector('[data-i="stockq"]');if(e){e.focus();const n=e.value.length;try{e.setSelectionRange(n,n)}catch(_){}}}else if(x.dataset.i=="given"){given=x.value;chg()}else if(x.dataset.i=="amt"){amtStr=x.value;refreshTot()}else if(x.dataset.i=="tip"){if(parts.length)return;tipMode={t:"eur",v:parseFloat(String(x.value).replace(",","."))||0};refreshTot()}});
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+document.addEventListener("keydown",e=>{if(e.key=="Enter"&&e.target.dataset&&e.target.dataset.i=="q"){const p=findByCode(e.target.value.trim());if(p){q="";add(p.id,1)}}});
 restoreDraft();handleReturn();render();initDb();if(returnSale)showTicket(returnSale);if(returnMsg)alert(returnMsg);
 </script>
 <script type="module">
@@ -364,9 +421,8 @@ try{
  const snap=d=>({id:d.id,data:()=>d.data()});
  const mk=(c,q)=>({orderBy:(f,dir)=>mk(c,F.query(q,F.orderBy(f,dir))),onSnapshot:(n,er)=>F.onSnapshot(q,s=>n({docs:s.docs.map(snap)}),er),get:()=>F.getDocs(q).then(s=>({docs:s.docs.map(snap)})),add:d=>F.addDoc(c,d)});
  const adapter={
-  doc:p=>({set:d=>F.setDoc(F.doc(db,p),d),delete:()=>F.deleteDoc(F.doc(db,p)),onSnapshot:(n,er)=>F.onSnapshot(F.doc(db,p),s=>n({exists:s.exists(),id:s.id,data:()=>s.data()}),er)}),
-  collection:p=>{const c=F.collection(db,p);return mk(c,c)},
-  inc:(p,lines)=>F.setDoc(F.doc(db,p),{lines:Object.fromEntries(Object.entries(lines).map(([k,v])=>[String(k),F.increment(v)])),t:Date.now()},{merge:true})
+  doc:p=>({inc:(f,n)=>F.setDoc(F.doc(db,p),{[f]:F.increment(n)},{merge:true}),set:d=>F.setDoc(F.doc(db,p),d),delete:()=>F.deleteDoc(F.doc(db,p)),onSnapshot:(n,er)=>F.onSnapshot(F.doc(db,p),s=>n({exists:s.exists(),id:s.id,data:()=>s.data()}),er)}),
+  collection:p=>{const c=F.collection(db,p);return mk(c,c)}
  };
  window.FB={auth,adapter,signIn:pw=>signInWithEmailAndPassword(auth,EMAIL,pw)};
  window.FBREADY=true;
