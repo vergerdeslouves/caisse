@@ -108,7 +108,7 @@ function startSync(){
  const fail=()=>{sync="local";render()};
  DB.doc("config/settings").onSnapshot(s=>{const d=s.exists?s.data():null;if(d){CFG={...CFG,...d};try{localStorage.setItem("vdl-cfg",JSON.stringify(CFG))}catch(e){}render()}},fail);
  DB.doc("config/products").onSnapshot(s=>{const d=s.exists?s.data():null;if(d&&d.list){S.products=d.list;save();render()}else if(!s.exists){DB.doc("config/products").set({list:S.products,t:Date.now()}).catch(()=>{})}},fail);
- DB.collection("sales").orderBy("t","asc").onSnapshot(r=>{clearTimeout(timer);S.sales=r.docs.map(d=>({id:d.id,...d.data()}));sync="live";save();render()},fail);
+ DB.collection("sales").orderBy("t","asc").onSnapshot(r=>{clearTimeout(timer);S.sales=r.docs.map(d=>({id:d.id,...d.data()}));sync="live";save();render();if(!encLance){encLance=true;importEnc();setInterval(importEnc,600000)}},fail);
  DB.collection("stock").onSnapshot(r=>{const m={};r.docs.forEach(d=>{m[d.id]=d.data().qty||0});S.stock=m;save();render()},fail);
  DB.doc("kota/ticket").onSnapshot(s=>{kotaLines=(s.exists&&s.data().lines)||{};applyKota()},()=>{});
  flushOutbox();
@@ -247,6 +247,33 @@ function kotaLignes(r){
  if(+r.enfants){const p=find("enfant");out.push(p?{id:p.id,qty:+r.enfants}:{custom:{name:r.formule+" enfant",price:20},qty:+r.enfants})}
  return out;
 }
+let encLance=false;
+async function importEnc(){
+ if(!CFG.kotaKey)return;
+ let j;try{const rr=await fetch("https://vergerdeslouves.fr/wp-json/kota/v1/encaissements?cle="+encodeURIComponent(CFG.kotaKey)+"&t="+Date.now());if(!rr.ok)return;j=await rr.json()}catch(e){return}
+ (j.encaissements||[]).forEach(e=>{
+  if(!e.cle||!(+e.montant>0)||S.sales.some(s=>s.ext===e.cle||s.id===e.cle))return;
+  const sale={t:+e.paye_le||Date.now(),items:[{name:e.libelle,price:+e.montant,qty:1}],total:+e.montant,pay:"Stripe (en ligne)",ext:e.cle};
+  if(e.type==="arrhes"){sale.deposit=true;sale.client=e.client;sale.used=false}
+  if(DB){DB.doc("sales/"+e.cle).set(sale).catch(()=>{})}else{S.sales.push(sale);save()}
+ });
+ render();
+}
+async function utiliserBonCode(code){
+ if(parts.length)return;
+ if(!CFG.kotaKey){alert("Saisis d’abord la clé des réservations dans l’onglet Produits.");return}
+ code=code||prompt("Code du bon cadeau (VDL-XXXX-XXXX)");if(!code)return;
+ const base="https://vergerdeslouves.fr/wp-json/kota/v1/bon/";const k="cle="+encodeURIComponent(CFG.kotaKey);
+ let v;try{v=await (await fetch(base+"verifier?"+k+"&code="+encodeURIComponent(code))).json()}catch(e){alert("Impossible de vérifier le bon (connexion).");return}
+ if(!v.valide){alert(v.message||"Bon non valable.");return}
+ const t=Math.round(total()*100)/100;if(!(t>0)){alert("Ajoute d’abord les articles au ticket.");return}
+ const max=Math.min(+v.solde,t);
+ const s=prompt("Bon "+v.code+(v.beneficiaire?" ("+v.beneficiaire+")":"")+"\nSolde disponible : "+eur(+v.solde)+"\nMontant à déduire de ce ticket :",String(max).replace(".",","));if(s===null)return;
+ const m=Math.min(max,Math.round(parseFloat(String(s).replace(",","."))*100)/100);if(!(m>0))return;
+ let u;try{const rr=await fetch(base+"utiliser?"+k,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:v.code,montant:m})});u=await rr.json();if(!rr.ok)throw new Error(u.message||rr.status)}catch(e){alert("Le bon n’a pas pu être débité : "+e.message);return}
+ const id=-(++cn);CUSTOM.push({id,name:"Bon cadeau "+v.code,price:-u.debite,cat:"Bon cadeau"});cart[id]=1;render();
+ alert("Bon débité de "+eur(u.debite)+". Solde restant : "+eur(+u.solde)+".");
+}
 async function showKotaResa(){
  closeMod();if(parts.length)return;
  const d=document.createElement("div");d.className="ov";d.id="mod";
@@ -256,13 +283,14 @@ async function showKotaResa(){
  let j;try{const rr=await fetch(KOTA_API+"?cle="+encodeURIComponent(CFG.kotaKey)+"&t="+Date.now());j=await rr.json();if(!rr.ok)throw new Error(j.message||rr.status)}catch(e){$("#kr").innerHTML="<p>Impossible de lire la réservation ("+esc(e.message)+").</p>";return}
  const r=j.reservation;if(!r){$("#kr").innerHTML="<p>Aucune réservation du Kota aujourd’hui.</p>";return}
  const deja=localStorage.getItem("vdl-kota-applique")==String(r.id);
- $("#kr").innerHTML='<p style="margin:0 0 6px"><b>'+esc(r.nom)+"</b> — "+esc(r.horaire)+'</p><p style="margin:0 0 6px">'+r.adultes+" adulte(s)"+(r.enfants?" + "+r.enfants+" enfant(s)":"")+" · "+esc(r.formule)+"</p>"+(r.allergies?'<p style="margin:0 0 6px">⚠ Allergies : '+esc(r.allergies)+"</p>":"")+'<p style="margin:0 0 6px">Total prévu (hors boissons) : '+eur(r.total)+"<br>Arrhes payées en ligne : "+eur(r.acompte_paye||0)+"</p>"+(deja?'<p class="mut">Déjà ajoutée au ticket sur cet appareil.</p>':"");
+ $("#kr").innerHTML='<p style="margin:0 0 6px"><b>'+esc(r.nom)+"</b> — "+esc(r.horaire)+'</p><p style="margin:0 0 6px">'+r.adultes+" adulte(s)"+(r.enfants?" + "+r.enfants+" enfant(s)":"")+" · "+esc(r.formule)+"</p>"+(r.allergies?'<p style="margin:0 0 6px">⚠ Allergies : '+esc(r.allergies)+"</p>":"")+(r.bon_code?'<p style="margin:0 0 6px">🎁 Bon cadeau '+esc(r.bon_code)+(+r.bon_arrhes>0?" ("+eur(+r.bon_arrhes)+" déjà utilisés pour les arrhes)":"")+(+r.bon_solde>0?" – solde : "+eur(+r.bon_solde):"")+"</p>":"")+'<p style="margin:0 0 6px">Total prévu (hors boissons) : '+eur(r.total)+"<br>Arrhes payées en ligne : "+eur(r.acompte_paye||0)+"</p>"+(deja?'<p class="mut">Déjà ajoutée au ticket sur cet appareil.</p>':"");
  const b=$("#krA");b.hidden=false;b.onclick=()=>{
   if(deja&&!confirm("Cette réservation a déjà été ajoutée au ticket. L’ajouter encore ?"))return;
   kotaLignes(r).forEach(x=>{if(x.id!=null)cart[x.id]=(cart[x.id]||0)+x.qty;else{const id=-(++cn);CUSTOM.push({id,...x.custom,cat:"Kota"});cart[id]=x.qty}});
-  if(+r.acompte_paye>0){const id=-(++cn);CUSTOM.push({id,name:"Arrhes payées en ligne – "+r.nom,price:-r.acompte_paye,cat:"Acompte"});cart[id]=1}
+  if(+r.acompte_paye>0){const dep=S.sales.find(s=>s.deposit&&!s.used&&(s.ext===r.arrhes_cle||s.id===r.arrhes_cle));const id=-(++cn);if(dep&&!CUSTOM.some(c=>c.dep===dep.t)){CUSTOM.push({id,name:"Arrhes payées en ligne – "+r.nom,price:-dep.total,cat:"Acompte",dep:dep.t})}else if(!dep){CUSTOM.push({id,name:"Arrhes payées en ligne – "+r.nom,price:-r.acompte_paye,cat:"Acompte"})}cart[id]=1}
   try{localStorage.setItem("vdl-kota-applique",String(r.id))}catch(e){}
-  closeMod();render()};
+  closeMod();render();
+  if(r.bon_code&&+r.bon_solde>0&&confirm("Bon cadeau "+r.bon_code+" : il reste "+eur(+r.bon_solde)+". Le déduire maintenant de l’addition ?"))utiliserBonCode(r.bon_code)};
 }
 function markDepUsed(t){const d=S.sales.find(x=>x.t===t&&x.deposit);if(!d)return;d.used=true;d.usedAt=Date.now();save();if(DB&&d.id){const{id,...rest}=d;DB.doc("sales/"+d.id).set(rest).catch(()=>{})}}
 function discount(kind){
@@ -398,7 +426,7 @@ function vCaisse(){
  const lines=Object.entries(cart).filter(([id])=>prod(id)).map(([id,n])=>{const p=prod(id);return`<div class="line"><span class="n">${p.name}</span><span class="q"><button data-a="add" data-v="${id}" data-d="-1">−</button>${n}<button data-a="add" data-v="${id}" data-d="1">+</button></span><b>${eur(n*p.price)}</b><button data-a="editLine" data-v="${id}" style="padding:2px 8px">✎</button><button class="dng" data-a="rm" data-v="${id}" style="padding:2px 8px">✕</button></div>`}).join("")||'<p class="mut">Touchez un produit pour l’ajouter.</p>';
  return`<div class="caisse"><div><input type="search" placeholder="Rechercher un produit…" value="${q.replace(/"/g,"&quot;")}" data-i="q">
  <div class="row"><input id="fl" placeholder="Libellé (optionnel)" style="flex:2;min-width:120px"><input id="fa" placeholder="Montant libre €" inputmode="decimal" style="flex:1;min-width:90px"><button data-a="free">+ Montant libre</button></div>
- <div class="row"><input id="rmv" inputmode="decimal" placeholder="Remise" style="flex:1;min-width:80px"><button data-a="discE">− €</button><button data-a="discP">− %</button><button data-a="deps">Acompte</button><button data-a="kotaResa">🔥 Résa Kota</button><button data-a="scanAdd">📷</button></div>
+ <div class="row"><input id="rmv" inputmode="decimal" placeholder="Remise" style="flex:1;min-width:80px"><button data-a="discE">− €</button><button data-a="discP">− %</button><button data-a="deps">Acompte</button><button data-a="kotaResa">🔥 Résa Kota</button><button data-a="bonCadeau">🎁 Bon</button><button data-a="scanAdd">📷</button></div>
  <div class="cats">${cats.map((c,i)=>`<button class="${c==cat?"on":""}" data-a="cat" data-v="${i}">${c}</button>`).join("")}</div>
  <div class="grid" id="grid"></div></div>
  <div class="card ticket"><button class="mob" data-a="goTop" style="margin-bottom:8px">↑ Produits</button><h3 style="margin:0 0 6px">Ticket en cours</h3>${lines}
@@ -444,7 +472,7 @@ function render(){
  $("#app").innerHTML=tab=="caisse"?vCaisse():tab=="histo"?vHisto():tab=="deps"?vDeps():tab=="stock"?vStock():vProd();
  if(tab=="caisse"){drawGrid();chg()}
 }
-const ACT={add:(v,b)=>add(+v,+b.dataset.d),addP,scanAdd:()=>openScan(code=>{const p=findByCode(code);if(p)add(p.id,1);else alert("Code inconnu : associe-le à un article dans l’onglet Stock.")}),discE:()=>discount("e"),discP:()=>discount("p"),deps:showDeps,kotaResa:showKotaResa,saveKotaKey,addDep:addDeposit,depPay:v=>{depPay=v;render()},depShow:v=>{const s=S.sales[+v];if(s)showTicket(s)},stockScan:()=>openScan(code=>{const p=findByCode(code);if(p)stockDialog(p,"in");else assocDialog(code)}),stockIn:v=>{const p=prod(+v);if(p)stockDialog(p,"in")},stockInv:v=>{const p=prod(+v);if(p)stockDialog(p,"set")},bcEdit:v=>{const p=prod(+v);if(!p)return;const bc=prompt("Code-barres de "+p.name,p.barcode||"");if(bc===null)return;if(bc.trim())p.barcode=bc.trim();else delete p.barcode;saveP()},goTicket:()=>{const e=document.querySelector(".ticket");if(e)e.scrollIntoView({behavior:"smooth"})},goTop:()=>window.scrollTo({top:0,behavior:"smooth"}),clearCart:()=>{cart={};CUSTOM=[];tipMode={t:"eur",v:0};resetPay();render()},editLine:v=>editLine(+v),rm:v=>rmLine(+v),split:v=>{splitN=+v;splitStart=parts.length;amtStr="";render()},splitGo:()=>{const n=parseInt($("#splitn").value);if(n>=2&&n<=50){splitN=n;splitStart=parts.length;amtStr="";render()}},undoPart:()=>{parts.pop();if(parts.length<splitStart)splitStart=parts.length;amtStr="";render()},tip:v=>{if(parts.length)return;const[k,n]=v.split(":");tipMode={t:k,v:+n};render()},free:()=>{if(parts.length)return;const a=parseFloat(String($("#fa").value).replace(",","."));if(!(a>0))return;const id=-(++cn);CUSTOM.push({id,name:$("#fl").value.trim()||"Montant libre",price:a,cat:"Libre"});add(id,1)},clearAll,csv,del:v=>del(+v),delP:v=>delP(+v),editP:v=>editP(+v),pay:v=>{pay=v;render()},cat:v=>setCat(+v),ticket:v=>showTicket(S.sales[+v]),tab:v=>{tab=v;render()},validate,saveCfg,saveTicketCfg};
+const ACT={add:(v,b)=>add(+v,+b.dataset.d),addP,scanAdd:()=>openScan(code=>{const p=findByCode(code);if(p)add(p.id,1);else alert("Code inconnu : associe-le à un article dans l’onglet Stock.")}),discE:()=>discount("e"),discP:()=>discount("p"),deps:showDeps,kotaResa:showKotaResa,saveKotaKey,bonCadeau:()=>utiliserBonCode(),addDep:addDeposit,depPay:v=>{depPay=v;render()},depShow:v=>{const s=S.sales[+v];if(s)showTicket(s)},stockScan:()=>openScan(code=>{const p=findByCode(code);if(p)stockDialog(p,"in");else assocDialog(code)}),stockIn:v=>{const p=prod(+v);if(p)stockDialog(p,"in")},stockInv:v=>{const p=prod(+v);if(p)stockDialog(p,"set")},bcEdit:v=>{const p=prod(+v);if(!p)return;const bc=prompt("Code-barres de "+p.name,p.barcode||"");if(bc===null)return;if(bc.trim())p.barcode=bc.trim();else delete p.barcode;saveP()},goTicket:()=>{const e=document.querySelector(".ticket");if(e)e.scrollIntoView({behavior:"smooth"})},goTop:()=>window.scrollTo({top:0,behavior:"smooth"}),clearCart:()=>{cart={};CUSTOM=[];tipMode={t:"eur",v:0};resetPay();render()},editLine:v=>editLine(+v),rm:v=>rmLine(+v),split:v=>{splitN=+v;splitStart=parts.length;amtStr="";render()},splitGo:()=>{const n=parseInt($("#splitn").value);if(n>=2&&n<=50){splitN=n;splitStart=parts.length;amtStr="";render()}},undoPart:()=>{parts.pop();if(parts.length<splitStart)splitStart=parts.length;amtStr="";render()},tip:v=>{if(parts.length)return;const[k,n]=v.split(":");tipMode={t:k,v:+n};render()},free:()=>{if(parts.length)return;const a=parseFloat(String($("#fa").value).replace(",","."));if(!(a>0))return;const id=-(++cn);CUSTOM.push({id,name:$("#fl").value.trim()||"Montant libre",price:a,cat:"Libre"});add(id,1)},clearAll,csv,del:v=>del(+v),delP:v=>delP(+v),editP:v=>editP(+v),pay:v=>{pay=v;render()},cat:v=>setCat(+v),ticket:v=>showTicket(S.sales[+v]),tab:v=>{tab=v;render()},validate,saveCfg,saveTicketCfg};
 document.addEventListener("click",e=>{if(e.target.closest("[data-pay]"))savePending();const b=e.target.closest("[data-a]");if(!b||b.disabled)return;const f=ACT[b.dataset.a];if(f)f(b.dataset.v,b)});
 document.addEventListener("input",e=>{const x=e.target;if(x.dataset.i=="q"){q=x.value;drawGrid()}else if(x.dataset.i=="stockq"){stockQ=x.value;render();const e=document.querySelector('[data-i="stockq"]');if(e){e.focus();const n=e.value.length;try{e.setSelectionRange(n,n)}catch(_){}}}else if(x.dataset.i=="given"){given=x.value;chg()}else if(x.dataset.i=="amt"){amtStr=x.value;refreshTot()}else if(x.dataset.i=="tip"){if(parts.length)return;tipMode={t:"eur",v:parseFloat(String(x.value).replace(",","."))||0};refreshTot()}});
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
