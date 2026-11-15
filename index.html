@@ -267,12 +267,11 @@ async function utiliserBonCode(code){
  let v;try{v=await (await fetch(base+"verifier?"+k+"&code="+encodeURIComponent(code))).json()}catch(e){alert("Impossible de vérifier le bon (connexion).");return}
  if(!v.valide){alert(v.message||"Bon non valable.");return}
  const t=Math.round(total()*100)/100;if(!(t>0)){alert("Ajoute d’abord les articles au ticket.");return}
- const max=Math.min(+v.solde,t);
- const s=prompt("Bon "+v.code+(v.beneficiaire?" ("+v.beneficiaire+")":"")+"\nSolde disponible : "+eur(+v.solde)+"\nMontant à déduire de ce ticket :",String(max).replace(".",","));if(s===null)return;
- const m=Math.min(max,Math.round(parseFloat(String(s).replace(",","."))*100)/100);if(!(m>0))return;
+ const m=Math.min(+v.solde,t),perdu=Math.round((+v.solde-m)*100)/100;
+ if(!confirm("Bon "+v.code+(v.beneficiaire?" ("+v.beneficiaire+")":"")+" : "+eur(+v.solde)+"\nLe bon s’utilise en une seule fois.\nDéduction sur ce ticket : "+eur(m)+(perdu>0?"\n⚠ "+eur(perdu)+" ne seront pas rendus. Ajoute d’abord tout ce qui doit être payé.":"")+"\n\nUtiliser le bon maintenant ?"))return;
  let u;try{const rr=await fetch(base+"utiliser?"+k,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:v.code,montant:m})});u=await rr.json();if(!rr.ok)throw new Error(u.message||rr.status)}catch(e){alert("Le bon n’a pas pu être débité : "+e.message);return}
- const id=-(++cn);CUSTOM.push({id,name:"Bon cadeau "+v.code,price:-u.debite,cat:"Bon cadeau"});cart[id]=1;render();
- alert("Bon débité de "+eur(u.debite)+". Solde restant : "+eur(+u.solde)+".");
+ const id=-(++cn);CUSTOM.push({id,name:"Bon cadeau "+v.code,price:-m,cat:"Bon cadeau"});cart[id]=1;render();
+ alert("Bon "+v.code+" utilisé : "+eur(m)+" déduits.");
 }
 async function showKotaResa(){
  closeMod();if(parts.length)return;
@@ -283,11 +282,13 @@ async function showKotaResa(){
  let j;try{const rr=await fetch(KOTA_API+"?cle="+encodeURIComponent(CFG.kotaKey)+"&t="+Date.now());j=await rr.json();if(!rr.ok)throw new Error(j.message||rr.status)}catch(e){$("#kr").innerHTML="<p>Impossible de lire la réservation ("+esc(e.message)+").</p>";return}
  const r=j.reservation;if(!r){$("#kr").innerHTML="<p>Aucune réservation du Kota aujourd’hui.</p>";return}
  const deja=localStorage.getItem("vdl-kota-applique")==String(r.id);
- $("#kr").innerHTML='<p style="margin:0 0 6px"><b>'+esc(r.nom)+"</b> — "+esc(r.horaire)+'</p><p style="margin:0 0 6px">'+r.adultes+" adulte(s)"+(r.enfants?" + "+r.enfants+" enfant(s)":"")+" · "+esc(r.formule)+"</p>"+(r.allergies?'<p style="margin:0 0 6px">⚠ Allergies : '+esc(r.allergies)+"</p>":"")+(r.bon_code?'<p style="margin:0 0 6px">🎁 Bon cadeau '+esc(r.bon_code)+(+r.bon_arrhes>0?" ("+eur(+r.bon_arrhes)+" déjà utilisés pour les arrhes)":"")+(+r.bon_solde>0?" – solde : "+eur(+r.bon_solde):"")+"</p>":"")+'<p style="margin:0 0 6px">Total prévu (hors boissons) : '+eur(r.total)+"<br>Arrhes payées en ligne : "+eur(r.acompte_paye||0)+"</p>"+(deja?'<p class="mut">Déjà ajoutée au ticket sur cet appareil.</p>':"");
+ $("#kr").innerHTML='<p style="margin:0 0 6px"><b>'+esc(r.nom)+"</b> — "+esc(r.horaire)+'</p><p style="margin:0 0 6px">'+r.adultes+" adulte(s)"+(r.enfants?" + "+r.enfants+" enfant(s)":"")+" · "+esc(r.formule)+"</p>"+(r.allergies?'<p style="margin:0 0 6px">⚠ Allergies : '+esc(r.allergies)+"</p>":"")+(r.bon_code?'<p style="margin:0 0 6px">🎁 Bon cadeau '+esc(r.bon_code)+(+r.bon_arrhes>0?" ("+eur(+r.bon_arrhes)+" sur les arrhes"+(+r.bon_reste>0?", "+eur(+r.bon_reste)+" à déduire de l’addition":"")+")":"")+(+r.bon_solde>0?" – solde : "+eur(+r.bon_solde):"")+"</p>":"")+'<p style="margin:0 0 6px">Total prévu (hors boissons) : '+eur(r.total)+"<br>Arrhes payées en ligne : "+eur(r.acompte_paye||0)+"</p>"+(deja?'<p class="mut">Déjà ajoutée au ticket sur cet appareil.</p>':"");
  const b=$("#krA");b.hidden=false;b.onclick=()=>{
   if(deja&&!confirm("Cette réservation a déjà été ajoutée au ticket. L’ajouter encore ?"))return;
   kotaLignes(r).forEach(x=>{if(x.id!=null)cart[x.id]=(cart[x.id]||0)+x.qty;else{const id=-(++cn);CUSTOM.push({id,...x.custom,cat:"Kota"});cart[id]=x.qty}});
   if(+r.acompte_paye>0){const dep=S.sales.find(s=>s.deposit&&!s.used&&(s.ext===r.arrhes_cle||s.id===r.arrhes_cle));const id=-(++cn);if(dep&&!CUSTOM.some(c=>c.dep===dep.t)){CUSTOM.push({id,name:"Arrhes payées en ligne – "+r.nom,price:-dep.total,cat:"Acompte",dep:dep.t})}else if(!dep){CUSTOM.push({id,name:"Arrhes payées en ligne – "+r.nom,price:-r.acompte_paye,cat:"Acompte"})}cart[id]=1}
+  const vb=Math.round(((+r.bon_arrhes||0)+(+r.bon_reste||0))*100)/100;
+  if(vb>0){const t=Math.round(total()*100)/100,m=Math.min(vb,Math.max(0,t));const id=-(++cn);CUSTOM.push({id,name:"Bon cadeau "+r.bon_code,price:-m,cat:"Bon cadeau"});cart[id]=1;if(vb-m>0.004)alert("Bon cadeau "+r.bon_code+" : "+eur(vb)+", dont "+eur(vb-m)+" non déduits car l’addition est plus petite. Ajoute d’abord les boissons, puis la réservation.")}
   try{localStorage.setItem("vdl-kota-applique",String(r.id))}catch(e){}
   closeMod();render();
   if(r.bon_code&&+r.bon_solde>0&&confirm("Bon cadeau "+r.bon_code+" : il reste "+eur(+r.bon_solde)+". Le déduire maintenant de l’addition ?"))utiliserBonCode(r.bon_code)};
