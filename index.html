@@ -110,7 +110,19 @@ function startSync(){
  DB.doc("config/products").onSnapshot(s=>{const d=s.exists?s.data():null;if(d&&d.list){S.products=d.list;save();render()}else if(!s.exists){DB.doc("config/products").set({list:S.products,t:Date.now()}).catch(()=>{})}},fail);
  DB.collection("sales").orderBy("t","asc").onSnapshot(r=>{clearTimeout(timer);S.sales=r.docs.map(d=>({id:d.id,...d.data()}));sync="live";save();render()},fail);
  DB.collection("stock").onSnapshot(r=>{const m={};r.docs.forEach(d=>{m[d.id]=d.data().qty||0});S.stock=m;save();render()},fail);
+ DB.doc("kota/ticket").onSnapshot(s=>{kotaLines=(s.exists&&s.data().lines)||{};applyKota()},()=>{});
  flushOutbox();
+}
+let kotaLines={};
+function applyKota(){
+ if(parts.length||!DB)return;
+ const done={};let any=false;
+ Object.entries(kotaLines).forEach(([id,n])=>{n=Math.round(+n||0);if(!n)return;done[id]=n;const p=S.products.find(x=>x.id==id);if(p&&n>0){cart[p.id]=(cart[p.id]||0)+n;any=true}});
+ if(!Object.keys(done).length)return;
+ kotaLines={};
+ DB.doc("kota/ticket").incLines(done).catch(()=>{});
+ if(any){try{if(navigator.vibrate)navigator.vibrate(80)}catch(e){}}
+ render();
 }
 function initDb(){
  let got=false;
@@ -132,7 +144,7 @@ const paid=()=>Math.round(parts.reduce((a,p)=>a+p.amt,0)*100)/100;
 const remaining=()=>Math.max(0,Math.round((grand()-paid())*100)/100);
 const defaultAmt=()=>{const r=remaining(),done=parts.length-splitStart;return(splitN&&done<splitN-1)?Math.round(r/(splitN-done)*100)/100:r};
 const due=()=>{const v=parseFloat(String(amtStr).replace(",","."));const r=remaining();return(amtStr!==""&&v>0)?Math.min(Math.round(v*100)/100,r):defaultAmt()};
-function resetPay(){parts=[];splitN=0;splitStart=0;amtStr="";given=""}
+function resetPay(){parts=[];splitN=0;splitStart=0;amtStr="";given="";setTimeout(applyKota,0)}
 function finalize(){
  const items=Object.entries(cart).filter(([id])=>prod(id)).map(([id,n])=>{const p=prod(id),o={name:p.name,price:p.price,qty:n};if(+id>0)o.pid=+id;if(p.dep)o.dep=p.dep;return o});
  const sale={t:Date.now(),items,total:grand(),pay:parts.length==1?parts[0].pay:"Mixte"};
@@ -169,7 +181,8 @@ function csv(){
  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="ventes-verger-des-louves.csv";a.click();
 }
 function recordSale(sale){if(DB){DB.collection("sales").add(sale).catch(()=>{S.sales.push(sale);save();outboxAdd(sale);render()})}else{S.sales.push(sale);save();outboxAdd(sale)}}
-const tracked=pid=>Object.prototype.hasOwnProperty.call(S.stock,pid);
+const STOCKCATS=["Vins","Bières","Soft","Liqueurs"];
+const tracked=pid=>{if(Object.prototype.hasOwnProperty.call(S.stock,pid))return true;const p=S.products.find(x=>x.id==pid);return !!(p&&STOCKCATS.includes(p.cat))};
 function stockAdd(pid,n){S.stock[pid]=(S.stock[pid]||0)+n;save();if(DB)DB.doc("stock/"+pid).inc("qty",n).catch(()=>{})}
 function stockSet(pid,n){S.stock[pid]=n;save();if(DB)DB.doc("stock/"+pid).set({qty:n}).catch(()=>{})}
 const normCode=c=>String(c||"").replace(/\D/g,"").replace(/^0+/,"");
@@ -248,7 +261,7 @@ function vStock(){
  const list=S.products.filter(p=>!k||(p.name+" "+(p.barcode||"")).toLowerCase().includes(k));
  return`<div class="row"><button class="pri" data-a="stockScan">📷 Scanner / Entrée de stock</button></div>
  <input placeholder="Rechercher un article ou un code" value="${esc(stockQ)}" data-i="stockq" style="margin-bottom:10px">
- <div class="card scroll"><table><tr><th>Article</th><th>Code</th><th>Stock</th><th></th></tr>${list.map(p=>{const t=tracked(p.id),n=S.stock[p.id];return`<tr><td>${esc(p.name)}</td><td class="w mut">${esc(p.barcode||"—")}</td><td class="w ${t&&n<=0?"low":""}"><b>${t?n:"—"}</b></td><td class="w"><button data-a="stockIn" data-v="${p.id}">+ Entrée</button> <button data-a="stockInv" data-v="${p.id}">Inventaire</button> <button data-a="bcEdit" data-v="${p.id}">Code</button></td></tr>`}).join("")}</table></div>`;
+ <div class="card scroll"><table><tr><th>Article</th><th>Code</th><th>Stock</th><th></th></tr>${list.map(p=>{const t=tracked(p.id),n=S.stock[p.id]||0;return`<tr><td>${esc(p.name)}</td><td class="w mut">${esc(p.barcode||"—")}</td><td class="w ${t&&n<=0?"low":""}"><b>${t?n:"—"}</b></td><td class="w"><button data-a="stockIn" data-v="${p.id}">+ Entrée</button> <button data-a="stockInv" data-v="${p.id}">Inventaire</button> <button data-a="bcEdit" data-v="${p.id}">Code</button></td></tr>`}).join("")}</table></div>`;
 }
 const zeroTk=()=>grand()===0&&!parts.length&&Object.values(cart).some(n=>n>0);
 const vb=()=>zeroTk()?{l:"Clôturer (réglé par acompte)",d:false}:{l:"Encaisser "+(due()>0?eur(due()):""),d:!(due()>0)};
@@ -347,7 +360,7 @@ function setCat(i){cat=cats[i];render()}
 function drawGrid(){
  const g=$("#grid");if(!g)return;const k=q.trim().toLowerCase();
  const list=S.products.filter(p=>(cat=="Tout"||p.cat==cat)&&(!k||(p.name+" "+p.cat).toLowerCase().includes(k)));
- g.innerHTML=list.map(p=>`<button class="prod" data-a="add" data-v="${p.id}" data-d="1"><b>${p.name}</b><span>${eur(p.price)}${tracked(p.id)?` · <i class="${S.stock[p.id]<=0?"low":""}">${S.stock[p.id]}</i>`:""}</span></button>`).join("")||'<p class="mut">Aucun produit.</p>';
+ g.innerHTML=list.map(p=>`<button class="prod" data-a="add" data-v="${p.id}" data-d="1"><b>${p.name}</b><span>${eur(p.price)}${tracked(p.id)?` · <i class="${(S.stock[p.id]||0)<=0?"low":""}">${S.stock[p.id]||0}</i>`:""}</span></button>`).join("")||'<p class="mut">Aucun produit.</p>';
 }
 function vCaisse(){
  cats=["Tout",...new Set(S.products.map(p=>p.cat))];if(!cats.includes(cat))cat="Tout";
@@ -421,7 +434,7 @@ try{
  const snap=d=>({id:d.id,data:()=>d.data()});
  const mk=(c,q)=>({orderBy:(f,dir)=>mk(c,F.query(q,F.orderBy(f,dir))),onSnapshot:(n,er)=>F.onSnapshot(q,s=>n({docs:s.docs.map(snap)}),er),get:()=>F.getDocs(q).then(s=>({docs:s.docs.map(snap)})),add:d=>F.addDoc(c,d)});
  const adapter={
-  doc:p=>({inc:(f,n)=>F.setDoc(F.doc(db,p),{[f]:F.increment(n)},{merge:true}),set:d=>F.setDoc(F.doc(db,p),d),delete:()=>F.deleteDoc(F.doc(db,p)),onSnapshot:(n,er)=>F.onSnapshot(F.doc(db,p),s=>n({exists:s.exists(),id:s.id,data:()=>s.data()}),er)}),
+  doc:p=>({inc:(f,n)=>F.setDoc(F.doc(db,p),{[f]:F.increment(n)},{merge:true}),set:d=>F.setDoc(F.doc(db,p),d),delete:()=>F.deleteDoc(F.doc(db,p)),incLines:l=>F.setDoc(F.doc(db,p),{lines:Object.fromEntries(Object.entries(l).map(([k,v])=>[k,F.increment(-v)]))},{merge:true}),onSnapshot:(n,er)=>F.onSnapshot(F.doc(db,p),s=>n({exists:s.exists(),id:s.id,data:()=>s.data()}),er)}),
   collection:p=>{const c=F.collection(db,p);return mk(c,c)}
  };
  window.FB={auth,adapter,signIn:pw=>signInWithEmailAndPassword(auth,EMAIL,pw)};
