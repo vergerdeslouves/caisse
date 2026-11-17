@@ -189,12 +189,13 @@ const normCode=c=>String(c||"").replace(/\D/g,"").replace(/^0+/,"");
 const findByCode=c=>{const k=normCode(c);return k?S.products.find(p=>normCode(p.barcode)===k):null};
 let scanner=null,depPay="Espèces",stockQ="";
 function closeScan(){if(scanner){try{scanner.stop().then(()=>scanner.clear()).catch(()=>{})}catch(e){}scanner=null}const o=document.querySelector("#scan");if(o)o.remove()}
+let scanCb=null;
 function openScan(cb){
  closeScan();
  const d=document.createElement("div");d.className="ov";d.id="scan";
  d.innerHTML='<div class="rc"><h3 style="margin:0 0 8px">Scanner un code-barres</h3><div id="qr" style="width:100%"></div><input id="mcode" inputmode="numeric" placeholder="ou saisis le code puis OK" style="margin:8px 0"><div class="row"><button class="pri" id="mok">OK</button><button id="mx">Fermer</button></div></div>';
  document.body.appendChild(d);
- const done=c=>{closeScan();cb(c)};
+ const done=c=>{closeScan();scanCb=null;cb(c)};scanCb=done;
  $("#mok").onclick=()=>{const v=$("#mcode").value.trim();if(v)done(v)};
  $("#mcode").onkeydown=e=>{if(e.key=="Enter"){const v=e.target.value.trim();if(v)done(v)}};
  $("#mx").onclick=closeScan;
@@ -423,9 +424,10 @@ let sbuf="",sat=0;
 document.addEventListener("keydown",e=>{
  const t=e.target;
  if(t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable))return;
- if(tab!="caisse"||document.querySelector(".ov"))return;
+ const inScan=!!(scanCb&&document.querySelector("#scan"));
+ if(!inScan&&(tab!="caisse"||document.querySelector(".ov")))return;
  const now=Date.now();
- if(e.key==="Enter"){const c=sbuf;sbuf="";if(c.length>=6){e.preventDefault();const p=findByCode(c);if(p)add(p.id,1);else alert("Code inconnu : "+c+"\nAssocie-le à un article dans l’onglet Stock.")}return}
+ if(e.key==="Enter"){const c=sbuf;sbuf="";if(c.length>=6&&inScan){e.preventDefault();scanCb(c);return}if(c.length>=6){e.preventDefault();const p=findByCode(c);if(p)add(p.id,1);else alert("Code inconnu : "+c+"\nAssocie-le à un article dans l’onglet Stock.")}return}
  if(e.key&&e.key.length===1){if(now-sat>100)sbuf="";sbuf+=e.key;sat=now}
 });
 restoreDraft();handleReturn();render();initDb();if(returnSale)showTicket(returnSale);if(returnMsg)alert(returnMsg);
