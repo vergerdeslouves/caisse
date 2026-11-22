@@ -90,7 +90,7 @@ const saveP=()=>{save();if(DB)DB.doc("config/products").set({list:S.products,t:D
 const OB="vdl-outbox";
 const outboxGet=()=>{try{return JSON.parse(localStorage.getItem(OB)||"[]")}catch(e){return[]}};
 const outboxAdd=s=>{try{const a=outboxGet();a.push(s);localStorage.setItem(OB,JSON.stringify(a))}catch(e){}};
-function flushOutbox(){const a=outboxGet();if(!a.length||!DB)return;try{localStorage.removeItem(OB)}catch(e){}a.forEach(s=>DB.collection("sales").add(s).catch(()=>outboxAdd(s)))}
+function flushOutbox(){flushStock();const a=outboxGet();if(!a.length||!DB)return;try{localStorage.removeItem(OB)}catch(e){}a.forEach(s=>DB.collection("sales").add(s).catch(()=>outboxAdd(s)))}
 let syncStarted=false,localOnly=false;
 function closeLogin(){const o=document.querySelector("#lg");if(o)o.remove()}
 function showLogin(){
@@ -183,7 +183,10 @@ function csv(){
 function recordSale(sale){if(DB){DB.collection("sales").add(sale).catch(()=>{S.sales.push(sale);save();outboxAdd(sale);render()})}else{S.sales.push(sale);save();outboxAdd(sale)}}
 const STOCKCATS=["Vins","Bières","Soft","Liqueurs"];
 const tracked=pid=>{if(Object.prototype.hasOwnProperty.call(S.stock,pid))return true;const p=S.products.find(x=>x.id==pid);return !!(p&&STOCKCATS.includes(p.cat))};
-function stockAdd(pid,n){S.stock[pid]=(S.stock[pid]||0)+n;save();if(DB)DB.doc("stock/"+pid).inc("qty",n).catch(()=>{})}
+const SOB="vdl-stock-outbox";function sobGet(){try{return JSON.parse(localStorage.getItem(SOB)||"{}")}catch(e){return{}}}
+function sobAdd(pid,n){const o=sobGet();o[pid]=(o[pid]||0)+n;try{localStorage.setItem(SOB,JSON.stringify(o))}catch(e){}}
+function stockAdd(pid,n){S.stock[pid]=(S.stock[pid]||0)+n;save();if(DB)DB.doc("stock/"+pid).inc("qty",n).catch(()=>sobAdd(pid,n));else sobAdd(pid,n)}
+function flushStock(){if(!DB)return;const o=sobGet();const k=Object.keys(o);if(!k.length)return;try{localStorage.removeItem(SOB)}catch(e){}k.forEach(pid=>{if(o[pid])DB.doc("stock/"+pid).inc("qty",o[pid]).catch(()=>sobAdd(pid,o[pid]))})}
 function stockSet(pid,n){S.stock[pid]=n;save();if(DB)DB.doc("stock/"+pid).set({qty:n}).catch(()=>{})}
 const normCode=c=>String(c||"").replace(/\D/g,"").replace(/^0+/,"");
 const findByCode=c=>{const k=normCode(c);return k?S.products.find(p=>normCode(p.barcode)===k):null};
@@ -504,7 +507,7 @@ document.addEventListener("keydown",e=>{
  if(e.key&&e.key.length===1){if(now-sat>100)sbuf="";sbuf+=e.key;sat=now}
 });
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
-const APP_V="2026-11-22b";
+const APP_V="2026-11-22c";
 async function checkMaj(){try{const t=await (await fetch("./?maj="+Date.now(),{cache:"no-store"})).text();const m=t.match(/const APP_V="([^"]+)"/);if(m&&m[1]!==APP_V){const libre=!Object.keys(cart).length&&!parts.length&&!document.querySelector("#mod");if(libre)location.reload();else window.__majEnAttente=true}}catch(e){}}
 setInterval(()=>{if(window.__majEnAttente&&!Object.keys(cart).length&&!parts.length&&!document.querySelector("#mod"))location.reload()},30000);
 setInterval(checkMaj,10*60*1000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkMaj()});setTimeout(checkMaj,15000);
