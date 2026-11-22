@@ -189,12 +189,13 @@ const normCode=c=>String(c||"").replace(/\D/g,"").replace(/^0+/,"");
 const findByCode=c=>{const k=normCode(c);return k?S.products.find(p=>normCode(p.barcode)===k):null};
 let scanner=null,depPay="Espèces",stockQ="";
 function closeScan(){if(scanner){try{scanner.stop().then(()=>scanner.clear()).catch(()=>{})}catch(e){}scanner=null}const o=document.querySelector("#scan");if(o)o.remove()}
+let scanCb=null;
 function openScan(cb){
  closeScan();
  const d=document.createElement("div");d.className="ov";d.id="scan";
  d.innerHTML='<div class="rc"><h3 style="margin:0 0 8px">Scanner un code-barres</h3><div id="qr" style="width:100%"></div><input id="mcode" inputmode="numeric" placeholder="ou saisis le code puis OK" style="margin:8px 0"><div class="row"><button class="pri" id="mok">OK</button><button id="mx">Fermer</button></div></div>';
  document.body.appendChild(d);
- const done=c=>{closeScan();cb(c)};
+ const done=c=>{closeScan();scanCb=null;cb(c)};scanCb=done;
  $("#mok").onclick=()=>{const v=$("#mcode").value.trim();if(v)done(v)};
  $("#mcode").onkeydown=e=>{if(e.key=="Enter"){const v=e.target.value.trim();if(v)done(v)}};
  $("#mx").onclick=closeScan;
@@ -491,8 +492,19 @@ function render(){
 const ACT={add:(v,b)=>add(+v,+b.dataset.d),addP,scanAdd:()=>openScan(code=>{const p=findByCode(code);if(p)add(p.id,1);else alert("Code inconnu : associe-le à un article dans l’onglet Stock.")}),discE:()=>discount("e"),discP:()=>discount("p"),deps:showDeps,kotaResa:showKotaResa,saveKotaKey,bonCadeau:showBons,addDep:addDeposit,depPay:v=>{depPay=v;render()},depShow:v=>{const s=S.sales[+v];if(s)showTicket(s)},stockScan:()=>openScan(code=>{const p=findByCode(code);if(p)stockDialog(p,"in");else assocDialog(code)}),stockIn:v=>{const p=prod(+v);if(p)stockDialog(p,"in")},stockInv:v=>{const p=prod(+v);if(p)stockDialog(p,"set")},bcEdit:v=>{const p=prod(+v);if(!p)return;const bc=prompt("Code-barres de "+p.name,p.barcode||"");if(bc===null)return;if(bc.trim())p.barcode=bc.trim();else delete p.barcode;saveP()},goTicket:()=>{const e=document.querySelector(".ticket");if(e)e.scrollIntoView({behavior:"smooth"})},goTop:()=>window.scrollTo({top:0,behavior:"smooth"}),clearCart:()=>{cart={};CUSTOM=[];tipMode={t:"eur",v:0};resetPay();render()},editLine:v=>editLine(+v),rm:v=>rmLine(+v),split:v=>{splitN=+v;splitStart=parts.length;amtStr="";render()},splitGo:()=>{const n=parseInt($("#splitn").value);if(n>=2&&n<=50){splitN=n;splitStart=parts.length;amtStr="";render()}},undoPart:()=>{parts.pop();if(parts.length<splitStart)splitStart=parts.length;amtStr="";render()},tip:v=>{if(parts.length)return;const[k,n]=v.split(":");tipMode={t:k,v:+n};render()},free:()=>{if(parts.length)return;const a=parseFloat(String($("#fa").value).replace(",","."));if(!(a>0))return;const id=-(++cn);CUSTOM.push({id,name:$("#fl").value.trim()||"Montant libre",price:a,cat:"Libre"});add(id,1)},clearAll,csv,del:v=>del(+v),delP:v=>delP(+v),editP:v=>editP(+v),pay:v=>{pay=v;render()},cat:v=>setCat(+v),ticket:v=>showTicket(S.sales[+v]),tab:v=>{tab=v;render()},validate,saveCfg,saveTicketCfg};
 document.addEventListener("click",e=>{if(e.target.closest("[data-pay]"))savePending();const b=e.target.closest("[data-a]");if(!b||b.disabled)return;const f=ACT[b.dataset.a];if(f)f(b.dataset.v,b)});
 document.addEventListener("input",e=>{const x=e.target;if(x.dataset.i=="q"){q=x.value;drawGrid()}else if(x.dataset.i=="stockq"){stockQ=x.value;render();const e=document.querySelector('[data-i="stockq"]');if(e){e.focus();const n=e.value.length;try{e.setSelectionRange(n,n)}catch(_){}}}else if(x.dataset.i=="given"){given=x.value;chg()}else if(x.dataset.i=="amt"){amtStr=x.value;refreshTot()}else if(x.dataset.i=="tip"){if(parts.length)return;tipMode={t:"eur",v:parseFloat(String(x.value).replace(",","."))||0};refreshTot()}});
+/* Douchette Bluetooth (clavier) : capte un scan rapide + Entrée même sans champ actif */
+let sbuf="",sat=0;
+document.addEventListener("keydown",e=>{
+ const t=e.target;
+ if(t&&(/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)||t.isContentEditable))return;
+ const inScan=!!(scanCb&&document.querySelector("#scan"));
+ if(!inScan&&(tab!="caisse"||document.querySelector(".ov")))return;
+ const now=Date.now();
+ if(e.key==="Enter"){const c=sbuf;sbuf="";if(c.length>=6&&inScan){e.preventDefault();scanCb(c);return}if(c.length>=6){e.preventDefault();const p=findByCode(c);if(p)add(p.id,1);else alert("Code inconnu : "+c+"\nAssocie-le à un article dans l’onglet Stock.")}return}
+ if(e.key&&e.key.length===1){if(now-sat>100)sbuf="";sbuf+=e.key;sat=now}
+});
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
-const APP_V="2026-11-22a";
+const APP_V="2026-11-22b";
 async function checkMaj(){try{const t=await (await fetch("./?maj="+Date.now(),{cache:"no-store"})).text();const m=t.match(/const APP_V="([^"]+)"/);if(m&&m[1]!==APP_V){const libre=!Object.keys(cart).length&&!parts.length&&!document.querySelector("#mod");if(libre)location.reload();else window.__majEnAttente=true}}catch(e){}}
 setInterval(()=>{if(window.__majEnAttente&&!Object.keys(cart).length&&!parts.length&&!document.querySelector("#mod"))location.reload()},30000);
 setInterval(checkMaj,10*60*1000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkMaj()});setTimeout(checkMaj,15000);
