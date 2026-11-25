@@ -66,6 +66,9 @@ a.btn.alt{background:var(--surf);color:var(--tx);border:1px solid var(--bd);font
 .rc{background:#fff;color:#222;border-radius:12px;padding:18px;max-width:380px;width:100%;max-height:90vh;overflow:auto}
 .rc button{background:#f3f3f3;color:#222;border:1px solid #cfcfcf}.rc button.pri{background:var(--ac);color:var(--act);border-color:var(--ac)}.rc button:disabled{opacity:.5}
 .rc pre{font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;margin:0 0 12px}
+.orders{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin:0 0 10px}.orders button{flex:none;white-space:nowrap}
+.warnb{background:#fbe9d0;color:#6b3a00;border-radius:8px;padding:8px 10px;margin:0 0 8px}
+#toast{position:fixed;left:50%;bottom:96px;transform:translate(-50%,260px);background:#1f2410;color:#fff;padding:10px 16px;border-radius:12px;z-index:40;transition:transform .25s;max-width:92vw;box-shadow:0 4px 18px rgba(0,0,0,.3)}#toast.on{transform:translate(-50%,0)}
 @media print{body>*:not(.ov){display:none!important}.ov{position:static;background:none;padding:0}.rc .row,.rc input{display:none}.rc{max-width:none}}
 </style>
 </head>
@@ -92,6 +95,95 @@ const outboxGet=()=>{try{return JSON.parse(localStorage.getItem(OB)||"[]")}catch
 const outboxAdd=s=>{try{const a=outboxGet();a.push(s);localStorage.setItem(OB,JSON.stringify(a))}catch(e){}};
 function flushOutbox(){flushStock();const a=outboxGet();if(!a.length||!DB)return;try{localStorage.removeItem(OB)}catch(e){}a.forEach(s=>DB.collection("sales").add(s).catch(()=>outboxAdd(s)))}
 let syncStarted=false,localOnly=false;
+/* ---------- Tickets ouverts, partagés entre tous les appareils ---------- */
+let DEV=null;try{DEV=localStorage.getItem("vdl-dev")}catch(e){}
+if(!DEV){const u=navigator.userAgent;DEV=(/iPad/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1)?"iPad":/iPhone/.test(u)?"iPhone":/Android/.test(u)?(/Mobile/.test(u)?"Téléphone":"Tablette"):"Ordinateur")+" "+Math.random().toString(36).slice(2,4).toUpperCase();try{localStorage.setItem("vdl-dev",DEV)}catch(e){}}
+let ORD={},cur=null,ordDenied=false,kotaSeen=false;
+try{ORD=JSON.parse(localStorage.getItem("vdl-orders")||"{}")||{}}catch(e){ORD={}}
+const saveOrd=()=>{try{localStorage.setItem("vdl-orders",JSON.stringify(ORD))}catch(e){}};
+const QK="vdl-ops",qGet=()=>{try{return JSON.parse(localStorage.getItem(QK)||"[]")}catch(e){return[]}};
+const qAdd=x=>{try{const a=qGet();a.push(x);localStorage.setItem(QK,JSON.stringify(a))}catch(e){}};
+const isTok=v=>v&&typeof v=="object"&&("__inc" in v||"__del" in v);
+function prune(o){Object.keys(o).forEach(k=>{const v=o[k];if(v&&typeof v=="object"&&!Array.isArray(v)&&!isTok(v)){prune(v);if(!Object.keys(v).length)delete o[k]}});return o}
+function applyLocal(o,p){Object.entries(p).forEach(([k,v])=>{if(isTok(v)){if("__inc" in v)o[k]=(+o[k]||0)+v.__inc;else delete o[k]}else if(v&&typeof v=="object"&&!Array.isArray(v)){if(!o[k]||typeof o[k]!="object")o[k]={};applyLocal(o[k],v)}else o[k]=v})}
+function sendOp(oid,p){(p===null?DB.orderDel(oid):DB.orderSet(oid,p)).catch(e=>{if(e&&e.code=="permission-denied"&&oid!=="kota"){ordDenied=true;renderSoft()}})}
+function op(oid,p){
+ if(p===null)delete ORD[oid];else{prune(p);if(!Object.keys(p).length)return;p.u=Date.now();p.by=DEV;if(!ORD[oid])ORD[oid]={};applyLocal(ORD[oid],p)}
+ saveOrd();
+ if(!localOnly&&!(oid!=="kota"&&ordDenied)){if(DB)sendOp(oid,p);else qAdd([oid,p])}
+ derive();
+}
+function flushOps(){const a=qGet();if(!a.length||!DB)return;try{localStorage.removeItem(QK)}catch(e){}a.forEach(([oid,p])=>sendOp(oid,p))}
+const isEmptyOrd=o=>!o||(!Object.values(o.lines||{}).some(n=>(+n||0)>0)&&!Object.values(o.custom||{}).some(c=>c&&(+c.qty||0)>0));
+const ordTotal=o=>{let t=0;Object.entries((o&&o.lines)||{}).forEach(([id,n])=>{n=+n||0;const p=S.products.find(x=>x.id==id);if(p&&n>0)t+=n*p.price});Object.values((o&&o.custom)||{}).forEach(c=>{if(c&&(+c.qty||0)>0)t+=c.qty*c.price});return Math.round(t*100)/100};
+const ordCount=o=>Object.values((o&&o.lines)||{}).reduce((a,n)=>a+Math.max(0,+n||0),0)+Object.values((o&&o.custom)||{}).reduce((a,c)=>a+(c&&+c.price>0?Math.max(0,+c.qty||0):0),0);
+const ordName=id=>id==="kota"?"🔥 Kota":((ORD[id]&&ORD[id].name)||"Ticket");
+const lockInfo=o=>o&&o.payBy&&o.payBy!==DEV&&Date.now()-(+o.payAt||0)<15*60000?o.payBy:null;
+let cidN=0;const newCid=()=>String(-(Date.now()*100+(++cidN%100)));
+function newOrder(name){
+ const id="o"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+ op(id,{name:name||("Ticket "+new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})),t:Date.now()});
+ cur=id;derive();return id;
+}
+function derive(){
+ if(parts.length)return;
+ if(cur&&cur!=="kota"&&!ORD[cur])cur=null;
+ const o=cur&&ORD[cur];
+ cart={};CUSTOM=[];tipMode={t:"eur",v:0};
+ if(!o)return;
+ Object.entries(o.lines||{}).forEach(([id,n])=>{n=Math.round(+n||0);if(n>0)cart[id]=n});
+ Object.entries(o.custom||{}).forEach(([id,c])=>{if(!c)return;const q=Math.round(+c.qty||0);if(q<=0)return;const x={id:+id,name:c.name,price:+c.price,cat:c.cat||"Libre"};if(c.dep)x.dep=c.dep;CUSTOM.push(x);cart[id]=q});
+ if(o.tip&&o.tip.t)tipMode={t:o.tip.t,v:+o.tip.v||0};
+}
+function addQty(id,d){
+ if(!cur)newOrder();
+ const o=ORD[cur]||{};id=String(id);
+ if(+id<0){const c=(o.custom||{})[id];if(!c)return;const q=(+c.qty||0)+d;op(cur,{custom:{[id]:q>0?{qty:{__inc:d}}:{__del:1}}})}
+ else{const n=(+((o.lines||{})[id])||0)+d;op(cur,{lines:{[id]:cur!=="kota"&&n<=0?{__del:1}:{__inc:n<0?d-n:d}}})}
+}
+function addCustom(x,q){if(!cur)newOrder();const c={name:x.name,price:x.price,cat:x.cat||"Libre",qty:q||1};if(x.dep)c.dep=x.dep;op(cur,{custom:{[newCid()]:c}})}
+function setTip(t,v){tipMode={t,v};if(cur)op(cur,{tip:{t,v}})}
+function gc(){Object.keys(ORD).forEach(id=>{const o=ORD[id];if(id!=="kota"&&o&&o.paidAt&&isEmptyOrd(o)&&!lockInfo(o))op(id,null)})}
+function settleOrder(){
+ if(!cur)return;
+ const id=cur,p={lines:{},custom:{},tip:{__del:1},payBy:{__del:1},payAt:{__del:1}};
+ Object.entries(cart).forEach(([k,n])=>{if(+k<0)p.custom[k]={__del:1};else p.lines[k]={__inc:-n}});
+ if(id==="kota"){p.resaId={__del:1};op("kota",p)}else{p.paidAt=Date.now();op(id,p);if(isEmptyOrd(ORD[id]))op(id,null)}
+ if(id==="kota"?isEmptyOrd(ORD.kota):!ORD[id])cur=null;
+}
+function selOrder(id){if(parts.length){alert("Termine ou annule d’abord l’encaissement en cours.");return}cur=id;derive();render()}
+function renameOrder(){if(!cur||cur==="kota")return;const n=prompt("Nom du ticket (ex. Table 3, Dupont…)",ordName(cur));if(n===null||!n.trim())return;op(cur,{name:n.trim()});render()}
+function clearCart(){
+ if(!cur){resetPay();render();return}
+ if(!confirm(cur==="kota"?"Vider le ticket du Kota ?":"Supprimer le ticket « "+ordName(cur)+" » ?"))return;
+ const id=cur;parts=[];
+ if(id==="kota"){const o=ORD.kota||{},p={lines:{},custom:{},tip:{__del:1},payBy:{__del:1},payAt:{__del:1},resaId:{__del:1}};Object.entries(o.lines||{}).forEach(([k,n])=>{n=+n||0;if(n)p.lines[k]={__inc:-n}});Object.keys(o.custom||{}).forEach(k=>p.custom[k]={__del:1});op("kota",p)}
+ else{op(id,null);cur=null}
+ resetPay();render();
+}
+function onOrders(docs){
+ ordDenied=false;
+ const k=ORD.kota;ORD={};docs.forEach(d=>{ORD[d.id]=d.data()});if(k)ORD.kota=k;saveOrd();
+ if(cur&&cur!=="kota"&&!ORD[cur]&&!parts.length){toast("Ce ticket a été encaissé ou supprimé sur un autre appareil.");cur=null}
+ gc();derive();renderSoft();
+}
+function onKota(d,local){
+ const prev=ORD.kota;ORD.kota=d||{};saveOrd();
+ if(kotaSeen&&prev&&!local){const a=[];Object.entries(ORD.kota.lines||{}).forEach(([id,n])=>{const x=(+n||0)-(+((prev.lines||{})[id])||0);if(x>0){const p=S.products.find(y=>y.id==id);a.push(x+"× "+(p?p.name:"article"))}});if(a.length){toast("🔥 Kota : + "+a.join(", "));try{if(navigator.vibrate)navigator.vibrate([80,60,80])}catch(e){}}}
+ if(!kotaSeen){kotaSeen=true;const fix={};Object.entries(ORD.kota.lines||{}).forEach(([id,n])=>{n=+n||0;if(n<0)fix[id]={__inc:-n}});if(Object.keys(fix).length)op("kota",{lines:fix})}
+ derive();renderSoft();
+}
+function toast(m){let e=document.querySelector("#toast");if(!e){e=document.createElement("div");e.id="toast";e.onclick=()=>e.className="";document.body.appendChild(e)}e.textContent=m;e.className="on";clearTimeout(toast.t);toast.t=setTimeout(()=>{e.className=""},5000)}
+let rsT=null;
+function renderSoft(){clearTimeout(rsT);const a=document.activeElement;if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&$("#app").contains(a)){rsT=setTimeout(renderSoft,1500);return}render()}
+function vOrders(){
+ const ids=["kota",...Object.keys(ORD).filter(id=>id!=="kota"&&ORD[id]).sort((a,b)=>(+ORD[a].t||0)-(+ORD[b].t||0))];
+ const k=ORD.kota||{},ping=+k.ping||0,age=Date.now()-ping;
+ const chips=ids.map(id=>{const o=ORD[id]||{},n=ordCount(o),lk=lockInfo(o);return`<button class="${cur==id?"on":""}" data-a="selOrd" data-v="${esc(id)}">${esc(ordName(id))}${n?` · ${n} art. · ${eur(ordTotal(o))}`:""}${lk?" ⏳":""}</button>`}).join("");
+ const warn=ping&&age>3*60000&&age<12*3600000?`<p class="warnb">📶 La tablette du kota n’a plus de connexion depuis ${new Date(ping).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})} : les scans et les demandes des clients n’arrivent plus.</p>`:"";
+ return`<div class="orders">${chips}<button data-a="newOrd">+ Nouveau ticket</button></div>${warn}${ordDenied?`<p class="warnb">⚠ Les tickets ne peuvent pas être partagés entre appareils : la base Firebase refuse l’accès à « orders ». Ils restent sur cet appareil.</p>`:""}`;
+}
+
 function closeLogin(){const o=document.querySelector("#lg");if(o)o.remove()}
 function showLogin(){
  if(document.querySelector("#lg"))return;
@@ -104,25 +196,16 @@ function showLogin(){
 function startSync(){
  if(syncStarted)return;syncStarted=true;
  DB=window.FB.adapter;sync="connecting";render();
- const timer=setTimeout(()=>{if(sync=="connecting"){sync="slow";render()}},10000);
- const fail=()=>{sync="local";render()};
- DB.doc("config/settings").onSnapshot(s=>{const d=s.exists?s.data():null;if(d){CFG={...CFG,...d};try{localStorage.setItem("vdl-cfg",JSON.stringify(CFG))}catch(e){}render()}},fail);
- DB.doc("config/products").onSnapshot(s=>{const d=s.exists?s.data():null;if(d&&d.list){S.products=d.list;save();render()}else if(!s.exists){DB.doc("config/products").set({list:S.products,t:Date.now()}).catch(()=>{})}},fail);
- DB.collection("sales").orderBy("t","asc").onSnapshot(r=>{clearTimeout(timer);S.sales=r.docs.map(d=>({id:d.id,...d.data()}));sync="live";save();render();if(!encLance){encLance=true;importEnc();setInterval(importEnc,600000)}},fail);
- DB.collection("stock").onSnapshot(r=>{const m={};r.docs.forEach(d=>{m[d.id]=d.data().qty||0});S.stock=m;save();render()},fail);
- DB.doc("kota/ticket").onSnapshot(s=>{kotaLines=(s.exists&&s.data().lines)||{};applyKota()},()=>{});
+ const timer=setTimeout(()=>{if(sync=="connecting"){sync="slow";renderSoft()}},10000);
+ const fail=()=>{sync="local";renderSoft()};
+ DB.doc("config/settings").onSnapshot(s=>{const d=s.exists?s.data():null;if(d){CFG={...CFG,...d};try{localStorage.setItem("vdl-cfg",JSON.stringify(CFG))}catch(e){}renderSoft()}},fail);
+ DB.doc("config/products").onSnapshot(s=>{const d=s.exists?s.data():null;if(d&&d.list){S.products=d.list;save();renderSoft()}else if(!s.exists){DB.doc("config/products").set({list:S.products,t:Date.now()}).catch(()=>{})}},fail);
+ DB.collection("sales").orderBy("t","asc").onSnapshot(r=>{clearTimeout(timer);S.sales=r.docs.map(d=>({id:d.id,...d.data()}));sync="live";save();renderSoft();if(!encLance){encLance=true;importEnc();setInterval(importEnc,600000)}},fail);
+ DB.collection("stock").onSnapshot(r=>{const m={};r.docs.forEach(d=>{m[d.id]=d.data().qty||0});S.stock=m;save();renderSoft()},fail);
+ flushOps();
+ DB.collection("orders").onSnapshot(r=>onOrders(r.docs),()=>{ordDenied=true;renderSoft()});
+ DB.doc("kota/ticket").onSnapshot(s=>onKota(s.exists?s.data():{},s.local),()=>{});
  flushOutbox();
-}
-let kotaLines={};
-function applyKota(){
- if(parts.length||!DB)return;
- const done={};let any=false;
- Object.entries(kotaLines).forEach(([id,n])=>{n=Math.round(+n||0);if(!n)return;done[id]=n;const p=S.products.find(x=>x.id==id);if(p&&n>0){cart[p.id]=(cart[p.id]||0)+n;any=true}});
- if(!Object.keys(done).length)return;
- kotaLines={};
- DB.doc("kota/ticket").incLines(done).catch(()=>{});
- if(any){try{if(navigator.vibrate)navigator.vibrate(80)}catch(e){}}
- render();
 }
 function initDb(){
  let got=false;
@@ -132,19 +215,19 @@ function initDb(){
  if(window.FBFAIL)window.dispatchEvent(new Event("fb-fail"));
  else if(window.FBREADY)window.dispatchEvent(new Event("fb-auth"));
 }
-async function clearAll(){if(!confirm("Effacer tout l’historique ?"))return;if(DB){try{const r=await DB.collection("sales").get();await Promise.all(r.docs.map(d=>DB.doc("sales/"+d.id).delete()))}catch(e){}}else{S.sales=[];save();render()}}
+async function clearAll(){if(!CFG.pin){alert("Choisis d’abord un code de protection dans l’onglet Produits.");return}const c=prompt("Code de protection pour effacer tout l’historique des ventes");if(c===null)return;if(c.trim()!==String(CFG.pin)){alert("Code incorrect.");return}if(!confirm("Effacer définitivement tout l’historique des ventes, sur tous les appareils ?"))return;if(DB){try{const r=await DB.collection("sales").get();await Promise.all(r.docs.map(d=>DB.doc("sales/"+d.id).delete()))}catch(e){}}else{S.sales=[];save();render()}}
 const $=s=>document.querySelector(s);
 let CUSTOM=[],cn=0,tipMode={t:"eur",v:0},parts=[],splitN=0,splitStart=0,amtStr="";
 const prod=id=>S.products.find(p=>p.id==id)||CUSTOM.find(p=>p.id==id);
 const total=()=>Object.entries(cart).reduce((a,[id,n])=>a+(prod(id)?n*prod(id).price:0),0);
-function add(id,d){if(parts.length)return;cart[id]=(cart[id]||0)+d;if(cart[id]<=0)delete cart[id];render()}
+function add(id,d){if(parts.length)return;addQty(id,d);render()}
 const tipAmt=()=>{const t=total();return tipMode.t=="pct"?Math.round(t*tipMode.v)/100:Math.max(0,Math.round(tipMode.v*100)/100)};
 const grand=()=>Math.round((total()+tipAmt())*100)/100;
 const paid=()=>Math.round(parts.reduce((a,p)=>a+p.amt,0)*100)/100;
 const remaining=()=>Math.max(0,Math.round((grand()-paid())*100)/100);
 const defaultAmt=()=>{const r=remaining(),done=parts.length-splitStart;return(splitN&&done<splitN-1)?Math.round(r/(splitN-done)*100)/100:r};
 const due=()=>{const v=parseFloat(String(amtStr).replace(",","."));const r=remaining();return(amtStr!==""&&v>0)?Math.min(Math.round(v*100)/100,r):defaultAmt()};
-function resetPay(){parts=[];splitN=0;splitStart=0;amtStr="";given="";setTimeout(applyKota,0)}
+function resetPay(){parts=[];splitN=0;splitStart=0;amtStr="";given="";derive()}
 function finalize(){
  const items=Object.entries(cart).filter(([id])=>prod(id)).map(([id,n])=>{const p=prod(id),o={name:p.name,price:p.price,qty:n};if(+id>0)o.pid=+id;if(p.dep)o.dep=p.dep;return o});
  const sale={t:Date.now(),items,total:grand(),pay:parts.length==1?parts[0].pay:"Mixte"};
@@ -152,6 +235,7 @@ function finalize(){
  const tp=tipAmt();if(tp)sale.tip=tp;
  recordSale(sale);
  items.forEach(i=>{if(i.pid&&tracked(i.pid))stockAdd(i.pid,-i.qty);if(i.dep)markDepUsed(i.dep)});
+ settleOrder();
  cart={};CUSTOM=[];tipMode={t:"eur",v:0};resetPay();
  return sale;
 }
@@ -159,8 +243,10 @@ function validate(){
  if(zeroTk()){parts=[{amt:0,pay:"Acompte"}];const s=finalize();render();showTicket(s);return}
  if(!(grand()>0))return;
  const d=due();if(!(d>0))return;
+ const lk=cur&&!parts.length&&lockInfo(ORD[cur]);if(lk&&!confirm("Ce ticket est en cours d’encaissement sur « "+lk+" ». Encaisser quand même ici ?"))return;
+ const first=!parts.length;
  parts.push({amt:d,pay});amtStr="";given="";
- if(remaining()<=0.004){const s=finalize();render();showTicket(s)}else render();
+ if(remaining()<=0.004){const s=finalize();render();showTicket(s)}else{if(first&&cur)op(cur,{payBy:DEV,payAt:Date.now()});render()}
 }
 function editLine(id){
  if(parts.length)return;
@@ -169,11 +255,11 @@ function editLine(id){
  const pr=prompt("Prix unitaire (€)",p.price);if(pr===null)return;
  const v=parseFloat(String(pr).replace(",","."));
  if(!(v>=0))return;
- if(id<0){p.name=n||p.name;p.price=v}
- else{const nid=-(++cn);CUSTOM.push({id:nid,name:n||p.name,price:v,cat:"Libre"});cart[nid]=cart[id];delete cart[id]}
+ if(id<0)op(cur,{custom:{[String(id)]:{name:n||p.name,price:v}}});
+ else{const q=cart[id];addCustom({name:n||p.name,price:v,cat:"Libre"},q);addQty(id,-q)}
  render();
 }
-function rmLine(id){if(parts.length)return;delete cart[id];render()}
+function rmLine(id){if(parts.length)return;const n=cart[id]||0;if(n)addQty(id,-n);render()}
 function csv(){
  const rows=[["Date","Articles","Paiement","Pourboire","Total"]];
  S.sales.forEach(s=>rows.push([new Date(s.t).toLocaleString("fr-FR"),s.items.map(i=>i.qty+"x "+i.name).join(" + "),(s.payments?s.payments.map(p=>p.pay+" "+p.amt).join(" + "):s.pay),String(s.tip||0).replace(".",","),String(s.total).replace(".",",")]));
@@ -235,7 +321,7 @@ function showDeps(){
  d.innerHTML='<div class="rc"><h3 style="margin:0 0 6px">Acomptes à déduire</h3><div id="dl"></div><div class="row"><button id="qx">Fermer</button></div></div>';
  document.body.appendChild(d);
  $("#dl").innerHTML=open.map(s=>'<div class="li"><span>'+esc(s.client||"Acompte")+' — '+eur(s.total)+'</span><button data-t="'+s.t+'">Déduire</button></div>').join("")||"<p>Aucun acompte en attente.</p>";
- $("#dl").onclick=e=>{const b=e.target.closest("button[data-t]");if(!b)return;const s=open.find(x=>String(x.t)===b.dataset.t);if(!s||CUSTOM.some(c=>c.dep===s.t))return;const id=-(++cn);CUSTOM.push({id,name:"Acompte – "+(s.client||""),price:-s.total,cat:"Acompte",dep:s.t});cart[id]=1;closeMod();render()};
+ $("#dl").onclick=e=>{const b=e.target.closest("button[data-t]");if(!b)return;const s=open.find(x=>String(x.t)===b.dataset.t);if(!s||CUSTOM.some(c=>c.dep===s.t))return;addCustom({name:"Acompte – "+(s.client||""),price:-s.total,cat:"Acompte",dep:s.t},1);closeMod();render()};
  $("#qx").onclick=closeMod;
 }
 const KOTA_API="https://vergerdeslouves.fr/wp-json/kota/v1/jour";
@@ -274,7 +360,7 @@ async function utiliserBonCode(code){
  const m=Math.min(+v.solde,t),perdu=Math.round((+v.solde-m)*100)/100;
  if(!confirm("Bon "+v.code+(v.beneficiaire?" ("+v.beneficiaire+")":"")+" : "+eur(+v.solde)+"\nLe bon s’utilise en une seule fois.\nDéduction sur ce ticket : "+eur(m)+(perdu>0?"\n⚠ "+eur(perdu)+" ne seront pas rendus. Ajoute d’abord tout ce qui doit être payé.":"")+"\n\nUtiliser le bon maintenant ?"))return;
  let u;try{const rr=await fetch(base+"utiliser?"+k,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:v.code,montant:m})});u=await rr.json();if(!rr.ok)throw new Error(u.message||rr.status)}catch(e){alert("Le bon n’a pas pu être débité : "+e.message);return}
- const id=-(++cn);CUSTOM.push({id,name:"Bon cadeau "+v.code,price:-m,cat:"Bon cadeau"});cart[id]=1;render();
+ addCustom({name:"Bon cadeau "+v.code,price:-m,cat:"Bon cadeau"},1);render();
  alert("Bon "+v.code+" utilisé : "+eur(m)+" déduits.");
 }
 async function showBons(){
@@ -300,15 +386,17 @@ async function showKotaResa(){
  if(!CFG.kotaKey){$("#kr").innerHTML="<p>Saisis d’abord la clé des réservations dans l’onglet Produits.</p>";return}
  let j;try{const rr=await fetch(KOTA_API+"?cle="+encodeURIComponent(CFG.kotaKey)+"&t="+Date.now());j=await rr.json();if(!rr.ok)throw new Error(j.message||rr.status)}catch(e){$("#kr").innerHTML="<p>Impossible de lire la réservation ("+esc(e.message)+").</p>";return}
  const r=j.reservation;if(!r){$("#kr").innerHTML="<p>Aucune réservation du Kota aujourd’hui.</p>";return}
- const deja=localStorage.getItem("vdl-kota-applique")==String(r.id);
+ const deja=String((ORD.kota||{}).resaId||"")===String(r.id);
  $("#kr").innerHTML='<p style="margin:0 0 6px"><b>'+esc(r.nom)+"</b> — "+esc(r.horaire)+'</p><p style="margin:0 0 6px">'+r.adultes+" adulte(s)"+(r.enfants?" + "+r.enfants+" enfant(s)":"")+" · "+esc(r.formule)+"</p>"+(r.allergies?'<p style="margin:0 0 6px">⚠ Allergies : '+esc(r.allergies)+"</p>":"")+(r.bon_code?'<p style="margin:0 0 6px">🎁 Bon cadeau '+esc(r.bon_code)+(+r.bon_arrhes>0?" ("+eur(+r.bon_arrhes)+" sur les arrhes"+(+r.bon_reste>0?", "+eur(+r.bon_reste)+" à déduire de l’addition":"")+")":"")+(+r.bon_solde>0?" – solde : "+eur(+r.bon_solde):"")+"</p>":"")+'<p style="margin:0 0 6px">Total prévu (hors boissons) : '+eur(r.total)+"<br>Arrhes payées en ligne : "+eur(r.acompte_paye||0)+"</p>"+(deja?'<p class="mut">Déjà ajoutée au ticket sur cet appareil.</p>':"");
  const b=$("#krA");b.hidden=false;b.onclick=()=>{
-  if(deja&&!confirm("Cette réservation a déjà été ajoutée au ticket. L’ajouter encore ?"))return;
-  kotaLignes(r).forEach(x=>{if(x.id!=null)cart[x.id]=(cart[x.id]||0)+x.qty;else{const id=-(++cn);CUSTOM.push({id,...x.custom,cat:"Kota"});cart[id]=x.qty}});
-  if(+r.acompte_paye>0){const dep=S.sales.find(s=>s.deposit&&!s.used&&(s.ext===r.arrhes_cle||s.id===r.arrhes_cle));const id=-(++cn);if(dep&&!CUSTOM.some(c=>c.dep===dep.t)){CUSTOM.push({id,name:"Arrhes payées en ligne – "+r.nom,price:-dep.total,cat:"Acompte",dep:dep.t})}else if(!dep){CUSTOM.push({id,name:"Arrhes payées en ligne – "+r.nom,price:-r.acompte_paye,cat:"Acompte"})}cart[id]=1}
+  if(parts.length)return;
+  if(deja&&!confirm("Cette réservation a déjà été ajoutée au ticket du Kota. L’ajouter encore ?"))return;
+  cur="kota";derive();
+  kotaLignes(r).forEach(x=>{if(x.id!=null)addQty(x.id,x.qty);else addCustom({...x.custom,cat:"Kota"},x.qty)});
+  if(+r.acompte_paye>0){const dep=S.sales.find(s=>s.deposit&&!s.used&&(s.ext===r.arrhes_cle||s.id===r.arrhes_cle));if(dep&&!CUSTOM.some(c=>c.dep===dep.t))addCustom({name:"Arrhes payées en ligne – "+r.nom,price:-dep.total,cat:"Acompte",dep:dep.t},1);else if(!dep)addCustom({name:"Arrhes payées en ligne – "+r.nom,price:-r.acompte_paye,cat:"Acompte"},1)}
   const vb=Math.round(((+r.bon_arrhes||0)+(+r.bon_reste||0))*100)/100;
-  if(vb>0){const t=Math.round(total()*100)/100,m=Math.min(vb,Math.max(0,t));const id=-(++cn);CUSTOM.push({id,name:"Bon cadeau "+r.bon_code,price:-m,cat:"Bon cadeau"});cart[id]=1;if(vb-m>0.004)alert("Bon cadeau "+r.bon_code+" : "+eur(vb)+", dont "+eur(vb-m)+" non déduits car l’addition est plus petite. Ajoute d’abord les boissons, puis la réservation.")}
-  try{localStorage.setItem("vdl-kota-applique",String(r.id))}catch(e){}
+  if(vb>0){const t=Math.round(total()*100)/100,m=Math.min(vb,Math.max(0,t));addCustom({name:"Bon cadeau "+r.bon_code,price:-m,cat:"Bon cadeau"},1);if(vb-m>0.004)alert("Bon cadeau "+r.bon_code+" : "+eur(vb)+", dont "+eur(vb-m)+" non déduits car l’addition est plus petite. Ajoute d’abord les boissons, puis la réservation.")}
+  op("kota",{resaId:String(r.id)});
   closeMod();render();
   if(r.bon_code&&+r.bon_solde>0&&confirm("Bon cadeau "+r.bon_code+" : il reste "+eur(+r.bon_solde)+". Le déduire maintenant de l’addition ?"))utiliserBonCode(r.bon_code)};
 }
@@ -319,7 +407,7 @@ function discount(kind){
  let a=v,name="Remise";
  if(kind=="p"){if(v>100)return;const base=Object.entries(cart).reduce((s,[id,n])=>{const p=prod(id);return s+(p&&p.price>0?n*p.price:0)},0);a=Math.round(base*v)/100;name="Remise "+String(v).replace(".",",")+" %"}
  if(!(a>0))return;
- const id=-(++cn);CUSTOM.push({id,name,price:-a,cat:"Remise"});cart[id]=1;render();
+ addCustom({name,price:-a,cat:"Remise"},1);$("#rmv").value="";render();
 }
 function addDeposit(){
  const c=$("#dc").value.trim(),a=parseFloat(String($("#da").value).replace(",","."));
@@ -327,7 +415,7 @@ function addDeposit(){
  const note=$("#dn").value.trim();
  const sale={t:Date.now(),items:[{name:"Acompte – "+c,price:a,qty:1}],total:a,pay:depPay,deposit:true,client:c,used:false};
  if(note)sale.note=note;
- recordSale(sale);render();showTicket(sale);
+ recordSale(sale);["#dc","#da","#dn"].forEach(x=>{const e=$(x);if(e)e.value=""});render();showTicket(sale);
 }
 function vDeps(){
  const open=S.sales.map((s,i)=>({s,i})).filter(x=>x.s.deposit&&!x.s.used);
@@ -410,7 +498,7 @@ function sumupUrl(t){const e=encodeURIComponent,a=t.toFixed(2);return"sumupmerch
 const CB=()=>location.origin+location.pathname;
 function savePending(){
  const items=Object.entries(cart).filter(([id])=>prod(id)).map(([id,n])=>({name:prod(id).name,price:prod(id).price,qty:n}));
- try{localStorage.setItem("vdl-pending",JSON.stringify({t:Date.now(),due:due(),cart,custom:CUSTOM,tipMode,parts,splitN,splitStart}))}catch(e){}
+ try{localStorage.setItem("vdl-pending",JSON.stringify({t:Date.now(),oid:cur,due:due(),cart,custom:CUSTOM,tipMode,parts,splitN,splitStart}))}catch(e){}
 }
 let returnSale=null,returnMsg="";
 function handleReturn(){
@@ -421,11 +509,13 @@ function handleReturn(){
  if(!pend)return;
  try{localStorage.removeItem("vdl-pending")}catch(e){}
  if(st=="success"){
-  cart=pend.cart||{};CUSTOM=pend.custom||[];tipMode=pend.tipMode||{t:"eur",v:0};parts=pend.parts||[];splitN=pend.splitN||0;splitStart=pend.splitStart||0;pay="CB";
+  cur=pend.oid||null;cart=pend.cart||{};CUSTOM=pend.custom||[];tipMode=pend.tipMode||{t:"eur",v:0};parts=pend.parts||[];splitN=pend.splitN||0;splitStart=pend.splitStart||0;pay="CB";
+  if(!parts.length&&cur)op(cur,{payBy:DEV,payAt:Date.now()});
   parts.push({amt:pend.due,pay:"CB (SumUp)"});
   if(remaining()<=0.004)returnSale=finalize();
  }else{
-  cart=pend.cart||{};CUSTOM=pend.custom||[];tipMode=pend.tipMode||{t:"eur",v:0};parts=pend.parts||[];splitN=pend.splitN||0;splitStart=pend.splitStart||0;pay="CB";
+  cur=pend.oid||null;parts=pend.parts||[];splitN=pend.splitN||0;splitStart=pend.splitStart||0;pay="CB";
+  if(parts.length){cart=pend.cart||{};CUSTOM=pend.custom||[];tipMode=pend.tipMode||{t:"eur",v:0}}else derive();
   returnMsg="Le paiement SumUp n’a pas abouti"+(p.get("smp-failure-cause")?" ("+p.get("smp-failure-cause")+")":"")+". Le ticket est conservé.";
  }
 }
@@ -444,12 +534,12 @@ function vCaisse(){
  cats=["Tout",...new Set(S.products.map(p=>p.cat))];if(!cats.includes(cat))cat="Tout";
  const t=total(),g=grand(),nb=Object.values(cart).reduce((a,b)=>a+b,0);
  const lines=Object.entries(cart).filter(([id])=>prod(id)).map(([id,n])=>{const p=prod(id);return`<div class="line"><span class="n">${p.name}</span><span class="q"><button data-a="add" data-v="${id}" data-d="-1">−</button>${n}<button data-a="add" data-v="${id}" data-d="1">+</button></span><b>${eur(n*p.price)}</b><button data-a="editLine" data-v="${id}" style="padding:2px 8px">✎</button><button class="dng" data-a="rm" data-v="${id}" style="padding:2px 8px">✕</button></div>`}).join("")||'<p class="mut">Touchez un produit pour l’ajouter.</p>';
- return`<div class="caisse"><div><input type="search" placeholder="Rechercher un produit…" value="${q.replace(/"/g,"&quot;")}" data-i="q">
+ return`${vOrders()}<div class="caisse"><div><input type="search" placeholder="Rechercher un produit…" value="${q.replace(/"/g,"&quot;")}" data-i="q">
  <div class="row"><input id="fl" placeholder="Libellé (optionnel)" style="flex:2;min-width:120px"><input id="fa" placeholder="Montant libre €" inputmode="decimal" style="flex:1;min-width:90px"><button data-a="free">+ Montant libre</button></div>
  <div class="row"><input id="rmv" inputmode="decimal" placeholder="Remise" style="flex:1;min-width:80px"><button data-a="discE">− €</button><button data-a="discP">− %</button><button data-a="deps">Acompte</button><button data-a="kotaResa">🔥 Résa Kota</button><button data-a="bonCadeau">🎁 Bon</button><button data-a="scanAdd">📷</button></div>
  <div class="cats">${cats.map((c,i)=>`<button class="${c==cat?"on":""}" data-a="cat" data-v="${i}">${c}</button>`).join("")}</div>
  <div class="grid" id="grid"></div></div>
- <div class="card ticket"><button class="mob" data-a="goTop" style="margin-bottom:8px">↑ Produits</button><h3 style="margin:0 0 6px">Ticket en cours</h3>${lines}
+ <div class="card ticket"><button class="mob" data-a="goTop" style="margin-bottom:8px">↑ Produits</button><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><h3 style="margin:0;flex:1">${cur?esc(ordName(cur)):"Nouveau ticket"}</h3>${cur&&cur!=="kota"?`<button data-a="renOrd" style="padding:4px 10px">✎ Nom</button>`:""}${cur?`<button data-a="closeOrd" style="padding:4px 10px">Fermer</button>`:""}</div>${cur&&lockInfo(ORD[cur])?`<p class="warnb">⏳ En cours d’encaissement sur « ${esc(lockInfo(ORD[cur]))} »</p>`:""}${lines}
  <div class="tips"><span class="mut">Pourboire</span>${[["eur",0,"Sans"],["eur",1,"1 €"],["eur",2,"2 €"],["eur",5,"5 €"],["pct",5,"5 %"],["pct",10,"10 %"]].map(([k,v,l])=>`<button class="${tipMode.t==k&&tipMode.v==v?"on":""}" data-a="tip" data-v="${k}:${v}">${l}</button>`).join("")}<input id="tipv" inputmode="decimal" placeholder="Autre €" data-i="tip" style="width:90px" value="${tipMode.t=="eur"&&![0,1,2,5].includes(tipMode.v)?tipMode.v:""}"></div>
  <div class="tot"><span>Total</span><span id="gt">${eur(g)}</span></div><p class="mut" id="tipl" style="margin:-6px 0 8px">${tipAmt()?"dont pourboire "+eur(tipAmt()):""}</p>
  ${parts.length?`<p class="mut" style="margin:0 0 6px">${parts.map((p,i)=>(i+1)+". "+p.pay+" "+eur(p.amt)).join(" · ")} — <b>Reste ${eur(remaining())}</b> <button data-a="undoPart" style="padding:2px 8px">Annuler</button></p>`:""}
@@ -458,7 +548,7 @@ function vCaisse(){
  <div class="pay">${["Espèces","CB","Autre"].map(m=>`<button class="${pay==m?"on":""}" data-a="pay" data-v="${m}">${m}</button>`).join("")}</div>
  ${pay=="Espèces"?`<input id="given" inputmode="decimal" placeholder="Montant reçu (€)" value="${given}" data-i="given"><p id="chg" class="mut"></p>`:""}
  <div id="payblk">${payBlock(due())}</div>
- <div class="row"><button class="pri" style="flex:1" id="vbtn" data-a="validate" ${vb().d?"disabled":""}>${vb().l}</button><button class="dng" data-a="clearCart">Vider</button></div></div>${nb?`<div class="bar"><button class="pri" data-a="goTicket">Voir le ticket · ${eur(g)}</button></div>`:""}</div>`;
+ <div class="row"><button class="pri" style="flex:1" id="vbtn" data-a="validate" ${vb().d?"disabled":""}>${vb().l}</button><button class="dng" data-a="clearCart">${cur&&cur!=="kota"?"Supprimer":"Vider"}</button></div></div>${nb?`<div class="bar"><button class="pri" data-a="goTicket">Voir le ticket · ${eur(g)}</button></div>`:""}</div>`;
 }
 function refreshTot(){const g=grand(),tp=tipAmt();const a=$("#gt");if(a)a.textContent=eur(g);const l=$("#tipl");if(l)l.textContent=tp?"dont pourboire "+eur(tp):"";const bb=$(".bar button");if(bb)bb.textContent="Voir le ticket · "+eur(g);const v=$("#vbtn");if(v){const st=vb();v.textContent=st.l;v.disabled=st.d}const p=$("#payblk");if(p)p.innerHTML=payBlock(due());chg()}
 function chg(){const t=due(),g=parseFloat(String(given).replace(",","."))||0;const e=$("#chg");if(e)e.textContent=g?(g>=t?"Rendu monnaie : "+eur(g-t):"Il manque "+eur(t-g)):""}
@@ -473,28 +563,48 @@ function vHisto(){
 }
 function del(i){if(confirm("Annuler cette vente ?")){const s=S.sales[i];(s.items||[]).forEach(x=>{if(x.pid&&tracked(x.pid))stockAdd(x.pid,x.qty)});if(DB&&s.id)DB.doc("sales/"+s.id).delete().catch(()=>{});else{S.sales.splice(i,1);save();render()}}}
 function vProd(){
- return`<div class="card" style="margin-bottom:12px"><h3 style="margin:0 0 8px">Mentions du ticket</h3><div class="row"><input id="cl" placeholder="Nom légal / forme juridique" value="${esc(CFG.legal)}" style="flex:2;min-width:180px"><input id="cs" placeholder="N° SIRET" inputmode="numeric" value="${esc(CFG.siret)}" style="flex:1;min-width:140px"></div><div class="row"><input id="ct" placeholder="Mention TVA" value="${esc(CFG.tva)}" style="flex:1;min-width:180px"><input id="cf" placeholder="Message de fin" value="${esc(CFG.foot)}" style="flex:1;min-width:180px"></div><button class="pri" data-a="saveTicketCfg">Enregistrer</button></div>
+ return`<div class="card" style="margin-bottom:12px"><h3 style="margin:0 0 8px">Cet appareil</h3><p class="mut" style="margin:0 0 8px">Nom montré aux autres appareils quand un ticket est en cours d’encaissement ici.</p><div class="row"><input id="devn" value="${esc(DEV)}" style="flex:2"><button class="pri" data-a="saveDev">Enregistrer</button></div></div>
+ <div class="card" style="margin-bottom:12px"><h3 style="margin:0 0 8px">Code de protection</h3><p class="mut" style="margin:0 0 8px">Demandé pour effacer l’historique des ventes. ${CFG.pin?"Un code est enregistré.":"Aucun code pour l’instant : l’effacement est bloqué."}</p><div class="row"><input id="pinc" type="password" inputmode="numeric" autocomplete="off" placeholder="${CFG.pin?"Nouveau code":"Choisir un code"}" style="flex:2"><button class="pri" data-a="savePin">Enregistrer</button></div></div>
+ <div class="card" style="margin-bottom:12px"><h3 style="margin:0 0 8px">Mentions du ticket</h3><div class="row"><input id="cl" placeholder="Nom légal / forme juridique" value="${esc(CFG.legal)}" style="flex:2;min-width:180px"><input id="cs" placeholder="N° SIRET" inputmode="numeric" value="${esc(CFG.siret)}" style="flex:1;min-width:140px"></div><div class="row"><input id="ct" placeholder="Mention TVA" value="${esc(CFG.tva)}" style="flex:1;min-width:180px"><input id="cf" placeholder="Message de fin" value="${esc(CFG.foot)}" style="flex:1;min-width:180px"></div><button class="pri" data-a="saveTicketCfg">Enregistrer</button></div>
  <div class="card" style="margin-bottom:12px"><h3 style="margin:0 0 8px">Réservations du Kota (site)</h3><p class="mut" style="margin:0 0 8px">Clé « Tablette / caisse » visible dans WordPress → Kota → Réglages.</p><div class="row"><input id="kk" type="password" placeholder="Clé des réservations" value="${esc(CFG.kotaKey||"")}" style="flex:2"><button class="pri" data-a="saveKotaKey">Enregistrer</button></div></div>
  <div class="card"><h3 style="margin:0 0 8px">Paiement par carte SumUp</h3><p class="mut" style="margin:0 0 8px">Clé d’affiliation à créer sur me.sumup.com/developers.</p><div class="row"><input id="ck" placeholder="Clé d’affiliation" value="${CFG.key}" style="flex:2"><input id="ca" placeholder="Identifiant d’appli" value="${CFG.appid}" style="flex:1"><button class="pri" data-a="saveCfg">Enregistrer</button></div></div>
  <div class="card" style="margin-top:12px"><h3 style="margin:0 0 8px">Ajouter un produit</h3><div class="row"><input id="pn" placeholder="Nom" style="flex:2"><input id="pp" placeholder="Prix €" inputmode="decimal" style="flex:1"><input id="pc" placeholder="Catégorie" style="flex:1"><button class="pri" data-a="addP">Ajouter</button></div></div>
  <div class="card scroll" style="margin-top:12px"><table><tr><th>Produit</th><th>Catégorie</th><th>Prix</th><th></th></tr>
  ${S.products.map(p=>`<tr><td>${p.name}</td><td>${p.cat}</td><td class="w">${eur(p.price)}</td><td class="w"><button data-a="editP" data-v="${p.id}">Modifier</button> <button class="dng" data-a="delP" data-v="${p.id}">✕</button></td></tr>`).join("")}</table></div>`;
 }
-function addP(){const n=$("#pn").value.trim(),p=parseFloat($("#pp").value.replace(",",".")),c=$("#pc").value.trim()||"Divers";if(!n||isNaN(p))return;S.products.push({id:Date.now(),name:n,price:p,cat:c});saveP()}
+function addP(){const n=$("#pn").value.trim(),p=parseFloat($("#pp").value.replace(",",".")),c=$("#pc").value.trim()||"Divers";if(!n||isNaN(p))return;S.products.push({id:Date.now(),name:n,price:p,cat:c});["#pn","#pp","#pc"].forEach(x=>$(x).value="");saveP()}
 function editP(id){const p=prod(id),n=prompt("Nom",p.name);if(n===null)return;const pr=prompt("Prix (€)",p.price);if(pr===null)return;const c=prompt("Catégorie",p.cat);p.name=n||p.name;p.price=parseFloat(String(pr).replace(",","."))||p.price;p.cat=c||p.cat;const bc=prompt("Code-barres (optionnel)",p.barcode||"");if(bc!==null){if(bc.trim())p.barcode=bc.trim();else delete p.barcode}saveP()}
 function delP(id){if(confirm("Supprimer ce produit ?")){S.products=S.products.filter(p=>p.id!=id);delete cart[id];saveP()}}
-function saveDraft(){try{localStorage.setItem("vdl-draft",JSON.stringify({cart,custom:CUSTOM,tipMode,parts,splitN,splitStart,pay}))}catch(e){}}
-function restoreDraft(){try{const d=JSON.parse(localStorage.getItem("vdl-draft")||"null");if(!d)return;cart=d.cart||{};CUSTOM=d.custom||[];tipMode=d.tipMode||{t:"eur",v:0};parts=d.parts||[];splitN=d.splitN||0;splitStart=d.splitStart||0;pay=d.pay||"Espèces";cn=CUSTOM.reduce((m,p)=>Math.max(m,-p.id),0)}catch(e){}}
+function saveDraft(){try{localStorage.setItem("vdl-draft",JSON.stringify({v:2,cur,parts,splitN,splitStart,pay,frozen:parts.length?{cart,custom:CUSTOM,tipMode}:null}))}catch(e){}}
+function restoreDraft(){try{
+ const d=JSON.parse(localStorage.getItem("vdl-draft")||"null");if(!d)return;
+ pay=d.pay||"Espèces";
+ if(d.v!==2){
+  // Ancienne version : le ticket qui était sur cet appareil devient un ticket partagé
+  const c=d.cart||{},cu=d.custom||[];if(!Object.keys(c).length)return;
+  const id=newOrder("Ticket repris"),p={lines:{},custom:{}};
+  Object.entries(c).forEach(([k,n])=>{if(+k<0){const x=cu.find(y=>y.id==k);if(x){const o={name:x.name,price:x.price,cat:x.cat||"Libre",qty:n};if(x.dep)o.dep=x.dep;p.custom[newCid()]=o}}else p.lines[k]={__inc:n}});
+  if(d.tipMode&&d.tipMode.v)p.tip=d.tipMode;
+  op(id,p);
+  if(d.parts&&d.parts.length){parts=d.parts;splitN=d.splitN||0;splitStart=d.splitStart||0}
+  return;
+ }
+ cur=d.cur||null;
+ if(d.parts&&d.parts.length&&d.frozen){parts=d.parts;splitN=d.splitN||0;splitStart=d.splitStart||0;cart=d.frozen.cart||{};CUSTOM=d.frozen.custom||[];tipMode=d.frozen.tipMode||{t:"eur",v:0}}else derive();
+}catch(e){}}
+const KEEP=["fl","fa","rmv","splitn","dc","da","dn","pn","pp","pc"];
 function render(){
  saveDraft();
- $("#date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+" · "+({live:"🟢 synchronisé",local:"⚪ local",connecting:"🟡 connexion…",slow:"🟠 hors ligne ?"}[sync]||"");
+ const kv={};KEEP.forEach(i=>{const e=document.getElementById(i);if(e&&e.value)kv[i]=e.value});
+ $("#date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})+" · "+({live:"🟢 synchronisé",local:"⚪ local",connecting:"🟡 connexion…",slow:"🟠 hors ligne ?"}[sync]||"")+" · "+DEV;
  drawNav();
  $("#app").innerHTML=tab=="caisse"?vCaisse():tab=="histo"?vHisto():tab=="deps"?vDeps():tab=="stock"?vStock():vProd();
  if(tab=="caisse"){drawGrid();chg()}
+ Object.entries(kv).forEach(([i,v])=>{const e=document.getElementById(i);if(e&&!e.value)e.value=v});
 }
-const ACT={add:(v,b)=>add(+v,+b.dataset.d),addP,scanAdd:()=>openScan(code=>{const p=findByCode(code);if(p)add(p.id,1);else alert("Code inconnu : associe-le à un article dans l’onglet Stock.")}),discE:()=>discount("e"),discP:()=>discount("p"),deps:showDeps,kotaResa:showKotaResa,saveKotaKey,bonCadeau:showBons,addDep:addDeposit,depPay:v=>{depPay=v;render()},depShow:v=>{const s=S.sales[+v];if(s)showTicket(s)},stockScan:()=>openScan(code=>{const p=findByCode(code);if(p)stockDialog(p,"in");else assocDialog(code)}),stockIn:v=>{const p=prod(+v);if(p)stockDialog(p,"in")},stockInv:v=>{const p=prod(+v);if(p)stockDialog(p,"set")},bcEdit:v=>{const p=prod(+v);if(!p)return;const bc=prompt("Code-barres de "+p.name,p.barcode||"");if(bc===null)return;if(bc.trim())p.barcode=bc.trim();else delete p.barcode;saveP()},goTicket:()=>{const e=document.querySelector(".ticket");if(e)e.scrollIntoView({behavior:"smooth"})},goTop:()=>window.scrollTo({top:0,behavior:"smooth"}),clearCart:()=>{cart={};CUSTOM=[];tipMode={t:"eur",v:0};resetPay();render()},editLine:v=>editLine(+v),rm:v=>rmLine(+v),split:v=>{splitN=+v;splitStart=parts.length;amtStr="";render()},splitGo:()=>{const n=parseInt($("#splitn").value);if(n>=2&&n<=50){splitN=n;splitStart=parts.length;amtStr="";render()}},undoPart:()=>{parts.pop();if(parts.length<splitStart)splitStart=parts.length;amtStr="";render()},tip:v=>{if(parts.length)return;const[k,n]=v.split(":");tipMode={t:k,v:+n};render()},free:()=>{if(parts.length)return;const a=parseFloat(String($("#fa").value).replace(",","."));if(!(a>0))return;const id=-(++cn);CUSTOM.push({id,name:$("#fl").value.trim()||"Montant libre",price:a,cat:"Libre"});add(id,1)},clearAll,csv,del:v=>del(+v),delP:v=>delP(+v),editP:v=>editP(+v),pay:v=>{pay=v;render()},cat:v=>setCat(+v),ticket:v=>showTicket(S.sales[+v]),tab:v=>{tab=v;render()},validate,saveCfg,saveTicketCfg};
+const ACT={add:(v,b)=>add(+v,+b.dataset.d),addP,scanAdd:()=>openScan(code=>{const p=findByCode(code);if(p)add(p.id,1);else alert("Code inconnu : associe-le à un article dans l’onglet Stock.")}),discE:()=>discount("e"),discP:()=>discount("p"),deps:showDeps,kotaResa:showKotaResa,saveKotaKey,bonCadeau:showBons,addDep:addDeposit,depPay:v=>{depPay=v;render()},depShow:v=>{const s=S.sales[+v];if(s)showTicket(s)},stockScan:()=>openScan(code=>{const p=findByCode(code);if(p)stockDialog(p,"in");else assocDialog(code)}),stockIn:v=>{const p=prod(+v);if(p)stockDialog(p,"in")},stockInv:v=>{const p=prod(+v);if(p)stockDialog(p,"set")},bcEdit:v=>{const p=prod(+v);if(!p)return;const bc=prompt("Code-barres de "+p.name,p.barcode||"");if(bc===null)return;if(bc.trim())p.barcode=bc.trim();else delete p.barcode;saveP()},goTicket:()=>{const e=document.querySelector(".ticket");if(e)e.scrollIntoView({behavior:"smooth"})},goTop:()=>window.scrollTo({top:0,behavior:"smooth"}),clearCart,selOrd:v=>selOrder(v),newOrd:()=>{if(parts.length){alert("Termine ou annule d’abord l’encaissement en cours.");return}newOrder();render()},renOrd:renameOrder,closeOrd:()=>{if(parts.length){alert("Termine ou annule d’abord l’encaissement en cours.");return}cur=null;derive();render()},savePin:()=>{const v=$("#pinc").value.trim();if(v.length<4){alert("Le code doit faire au moins 4 caractères.");return}if(CFG.pin&&prompt("Code actuel")!==String(CFG.pin)){alert("Code actuel incorrect.");return}CFG={...CFG,pin:v};try{localStorage.setItem("vdl-cfg",JSON.stringify(CFG))}catch(e){}if(DB)DB.doc("config/settings").set(CFG).catch(()=>{});$("#pinc").value="";render();alert("Code enregistré sur tous les appareils.")},saveDev:()=>{const v=$("#devn").value.trim();if(!v)return;DEV=v;try{localStorage.setItem("vdl-dev",DEV)}catch(e){}render()},editLine:v=>editLine(+v),rm:v=>rmLine(+v),split:v=>{splitN=+v;splitStart=parts.length;amtStr="";render()},splitGo:()=>{const n=parseInt($("#splitn").value);if(n>=2&&n<=50){splitN=n;splitStart=parts.length;amtStr="";$("#splitn").value="";render()}},undoPart:()=>{parts.pop();if(parts.length<splitStart)splitStart=parts.length;amtStr="";if(!parts.length){if(cur)op(cur,{payBy:{__del:1},payAt:{__del:1}});derive()}render()},tip:v=>{if(parts.length)return;const[k,n]=v.split(":");setTip(k,+n);render()},free:()=>{if(parts.length)return;const a=parseFloat(String($("#fa").value).replace(",","."));if(!(a>0))return;addCustom({name:$("#fl").value.trim()||"Montant libre",price:a,cat:"Libre"},1);$("#fa").value="";$("#fl").value="";render()},clearAll,csv,del:v=>del(+v),delP:v=>delP(+v),editP:v=>editP(+v),pay:v=>{pay=v;render()},cat:v=>setCat(+v),ticket:v=>showTicket(S.sales[+v]),tab:v=>{tab=v;render()},validate,saveCfg,saveTicketCfg};
 document.addEventListener("click",e=>{if(e.target.closest("[data-pay]"))savePending();const b=e.target.closest("[data-a]");if(!b||b.disabled)return;const f=ACT[b.dataset.a];if(f)f(b.dataset.v,b)});
-document.addEventListener("input",e=>{const x=e.target;if(x.dataset.i=="q"){q=x.value;drawGrid()}else if(x.dataset.i=="stockq"){stockQ=x.value;render();const e=document.querySelector('[data-i="stockq"]');if(e){e.focus();const n=e.value.length;try{e.setSelectionRange(n,n)}catch(_){}}}else if(x.dataset.i=="given"){given=x.value;chg()}else if(x.dataset.i=="amt"){amtStr=x.value;refreshTot()}else if(x.dataset.i=="tip"){if(parts.length)return;tipMode={t:"eur",v:parseFloat(String(x.value).replace(",","."))||0};refreshTot()}});
+document.addEventListener("input",e=>{const x=e.target;if(x.dataset.i=="q"){q=x.value;drawGrid()}else if(x.dataset.i=="stockq"){stockQ=x.value;render();const e=document.querySelector('[data-i="stockq"]');if(e){e.focus();const n=e.value.length;try{e.setSelectionRange(n,n)}catch(_){}}}else if(x.dataset.i=="given"){given=x.value;chg()}else if(x.dataset.i=="amt"){amtStr=x.value;refreshTot()}else if(x.dataset.i=="tip"){if(parts.length)return;setTip("eur",parseFloat(String(x.value).replace(",","."))||0);refreshTot()}});
 /* Douchette Bluetooth (clavier) : capte un scan rapide + Entrée même sans champ actif */
 let sbuf="",sat=0;
 document.addEventListener("keydown",e=>{
@@ -507,9 +617,9 @@ document.addEventListener("keydown",e=>{
  if(e.key&&e.key.length===1){if(now-sat>100)sbuf="";sbuf+=e.key;sat=now}
 });
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
-const APP_V="2026-11-22c";
-async function checkMaj(){try{const t=await (await fetch("./?maj="+Date.now(),{cache:"no-store"})).text();const m=t.match(/const APP_V="([^"]+)"/);if(m&&m[1]!==APP_V){const libre=!Object.keys(cart).length&&!parts.length&&!document.querySelector("#mod");if(libre)location.reload();else window.__majEnAttente=true}}catch(e){}}
-setInterval(()=>{if(window.__majEnAttente&&!Object.keys(cart).length&&!parts.length&&!document.querySelector("#mod"))location.reload()},30000);
+const APP_V="2026-11-25b";
+async function checkMaj(){try{const t=await (await fetch("./?maj="+Date.now(),{cache:"no-store"})).text();const m=t.match(/const APP_V="([^"]+)"/);if(m&&m[1]!==APP_V){const libre=!parts.length&&!document.querySelector(".ov");if(libre)location.reload();else window.__majEnAttente=true}}catch(e){}}
+setInterval(()=>{if(window.__majEnAttente&&!parts.length&&!document.querySelector(".ov"))location.reload()},30000);
 setInterval(checkMaj,10*60*1000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkMaj()});setTimeout(checkMaj,15000);
 document.addEventListener("keydown",e=>{if(e.key=="Enter"&&e.target.dataset&&e.target.dataset.i=="q"){const p=findByCode(e.target.value.trim());if(p){q="";add(p.id,1)}}});
 restoreDraft();handleReturn();render();initDb();if(returnSale)showTicket(returnSale);if(returnMsg)alert(returnMsg);
@@ -527,8 +637,12 @@ try{
  try{db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})})}catch(e){db=F.getFirestore(app)}
  const snap=d=>({id:d.id,data:()=>d.data()});
  const mk=(c,q)=>({orderBy:(f,dir)=>mk(c,F.query(q,F.orderBy(f,dir))),onSnapshot:(n,er)=>F.onSnapshot(q,s=>n({docs:s.docs.map(snap)}),er),get:()=>F.getDocs(q).then(s=>({docs:s.docs.map(snap)})),add:d=>F.addDoc(c,d)});
+ const conv=v=>{if(v&&typeof v=="object"&&!Array.isArray(v)){if("__inc" in v)return F.increment(v.__inc);if("__del" in v)return F.deleteField();const o={};Object.entries(v).forEach(([k,x])=>{o[k]=conv(x)});return o}return v};
+ const opath=id=>id==="kota"?F.doc(db,"kota","ticket"):F.doc(db,"orders",id);
  const adapter={
-  doc:p=>({inc:(f,n)=>F.setDoc(F.doc(db,p),{[f]:F.increment(n)},{merge:true}),set:d=>F.setDoc(F.doc(db,p),d),delete:()=>F.deleteDoc(F.doc(db,p)),incLines:l=>F.setDoc(F.doc(db,p),{lines:Object.fromEntries(Object.entries(l).map(([k,v])=>[k,F.increment(-v)]))},{merge:true}),onSnapshot:(n,er)=>F.onSnapshot(F.doc(db,p),s=>n({exists:s.exists(),id:s.id,data:()=>s.data()}),er)}),
+  orderSet:(id,p)=>F.setDoc(opath(id),conv(p),{merge:true}),
+  orderDel:id=>F.deleteDoc(opath(id)),
+  doc:p=>({inc:(f,n)=>F.setDoc(F.doc(db,p),{[f]:F.increment(n)},{merge:true}),set:d=>F.setDoc(F.doc(db,p),d),delete:()=>F.deleteDoc(F.doc(db,p)),incLines:l=>F.setDoc(F.doc(db,p),{lines:Object.fromEntries(Object.entries(l).map(([k,v])=>[k,F.increment(-v)]))},{merge:true}),onSnapshot:(n,er)=>F.onSnapshot(F.doc(db,p),s=>n({exists:s.exists(),id:s.id,local:s.metadata.hasPendingWrites,data:()=>s.data()}),er)}),
   collection:p=>{const c=F.collection(db,p);return mk(c,c)}
  };
  window.FB={auth,adapter,signIn:pw=>signInWithEmailAndPassword(auth,EMAIL,pw)};
