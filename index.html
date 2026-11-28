@@ -219,7 +219,7 @@ function startSync(){
  DB.doc("config/settings").onSnapshot(s=>{const d=s.exists?s.data():null;if(d){CFG={...CFG,...d};try{localStorage.setItem("vdl-cfg",JSON.stringify(CFG))}catch(e){}renderSoft()}},fail);
  DB.doc("config/products").onSnapshot(s=>{const d=s.exists?s.data():null;
   if(d&&d.list){if(JSON.stringify(d.list)!==JSON.stringify(S.products))bakAdd(S.products,"Liste de cet appareil remplacée par la synchronisation");LASTSRV=JSON.parse(JSON.stringify(d.list));if(!s.fromCache){if(!prodReady&&!PH.length)pushHist(d.list);prodReady=true}S.products=d.list;save();renderSoft()}
-  else if(!s.exists&&!s.fromCache){prodReady=true;LASTSRV=JSON.parse(JSON.stringify(S.products));DB.doc("config/products").set({list:S.products,t:Date.now(),by:DEV}).catch(()=>{})}},fail);
+  else if(!s.exists&&!s.fromCache){prodReady=true;LASTSRV=JSON.parse(JSON.stringify(S.products));DB.doc("config/products").set({list:S.products,t:Date.now(),by:DEV}).catch(()=>{})}},fail,true);
  DB.doc("config/productsHistory").onSnapshot(s=>{const d=s.exists?s.data():null;PH=(d&&Array.isArray(d.versions))?d.versions:[];renderSoft()},()=>{});
  DB.collection("sales").orderBy("t","asc").onSnapshot(r=>{clearTimeout(timer);S.sales=r.docs.map(d=>({id:d.id,...d.data()}));sync="live";save();renderSoft();if(!encLance){encLance=true;importEnc();setInterval(importEnc,600000)}},fail);
  DB.collection("stock").onSnapshot(r=>{const m={};r.docs.forEach(d=>{m[d.id]=d.data().qty||0});S.stock=m;save();renderSoft()},fail);
@@ -675,7 +675,7 @@ try{
  const adapter={
   orderSet:(id,p)=>F.setDoc(opath(id),conv(p),{merge:true}),
   orderDel:id=>F.deleteDoc(opath(id)),
-  doc:p=>({inc:(f,n)=>F.setDoc(F.doc(db,p),{[f]:F.increment(n)},{merge:true}),set:d=>F.setDoc(F.doc(db,p),d),delete:()=>F.deleteDoc(F.doc(db,p)),incLines:l=>F.setDoc(F.doc(db,p),{lines:Object.fromEntries(Object.entries(l).map(([k,v])=>[k,F.increment(-v)]))},{merge:true}),onSnapshot:(n,er)=>F.onSnapshot(F.doc(db,p),s=>n({exists:s.exists(),id:s.id,local:s.metadata.hasPendingWrites,fromCache:s.metadata.fromCache,data:()=>s.data()}),er)}),
+  doc:p=>({inc:(f,n)=>F.setDoc(F.doc(db,p),{[f]:F.increment(n)},{merge:true}),set:d=>F.setDoc(F.doc(db,p),d),delete:()=>F.deleteDoc(F.doc(db,p)),incLines:l=>F.setDoc(F.doc(db,p),{lines:Object.fromEntries(Object.entries(l).map(([k,v])=>[k,F.increment(-v)]))},{merge:true}),onSnapshot:(n,er,meta)=>F.onSnapshot(F.doc(db,p),{includeMetadataChanges:!!meta},s=>n({exists:s.exists(),id:s.id,local:s.metadata.hasPendingWrites,fromCache:s.metadata.fromCache,data:()=>s.data()}),er)}),
   collection:p=>{const c=F.collection(db,p);return mk(c,c)}
  };
  window.FB={auth,adapter,signIn:pw=>signInWithEmailAndPassword(auth,EMAIL,pw)};
